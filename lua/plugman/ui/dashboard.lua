@@ -1,0 +1,1611 @@
+local PlugmanDashboard = {}
+PlugmanDashboard.__index = PlugmanDashboard
+
+local utils = require('plugman.core.utils')
+
+---Create new dashboard instance
+---@param config PlugmanConfig
+---@return PlugmanDashboard
+function PlugmanDashboard:new(config)
+    ---@class PlugmanDashboard
+    local dashboard = setmetatable({}, self)
+    dashboard.config = config
+    dashboard.buf = nil
+    dashboard.win = nil
+    dashboard.update_timer = nil
+    dashboard.auto_refresh = true
+    dashboard.refresh_interval = 1000
+    dashboard.sections = {
+        'header',
+        'stats',
+        'status',
+        'plugins',
+        'logs',
+        'keymaps'
+    }
+    dashboard.current_section = 'plugins'
+    dashboard.selected_plugin = 1
+    dashboard.scroll_offset = 0
+    dashboard.filter = ''
+    dashboard.show_disabled = true
+    dashboard.show_lazy = true
+    dashboard.sort_by = 'name' -- name, status, load_time, priority
+    dashboard.sort_desc = false
+
+    -- Real-time update listeners
+    dashboard.listeners = {}
+    dashboard:_setup_event_listeners()
+
+    return dashboard
+end
+
+---Setup event listeners for real-time updates
+function PlugmanDashboard:_setup_event_listeners()
+    -- Listen for plugin events
+    vim.api.nvim_create_autocmd('User', {
+        group = vim.api.nvim_create_augroup('PlugmanDashboard', { clear = true }),
+        pattern = {
+            'PlugmanPluginLoaded',
+            'PlugmanPluginInstalled',
+            'PlugmanPluginUpdated',
+            'PlugmanPluginRemoved',
+            'PlugmanPluginError'
+        },
+        callback = function(ev)
+            self:_handle_plugin_event(ev)
+        end,
+    })
+end
+
+---Handle plugin events for real-time updates
+---@param ev table
+function PlugmanDashboard:_handle_plugin_event(ev)
+    if not self:is_open() then
+        return
+    end
+
+    -- Add to activity log
+    local timestamp = os.date('%H:%M:%S')
+    local message = string.format('[%s] %s: %s', timestamp, ev.pattern, ev.data.name or 'unknown')
+
+    table.insert(self.activity_log, message)
+    if #self.activity_log > 50 then
+        table.remove(self.activity_log, 1)
+    end
+
+    -- Refresh dashboard
+    if self.auto_refresh then
+        self:refresh()
+    end
+end
+
+---Check if dashboard is open
+---@return boolean
+function PlugmanDashboard:is_open()
+    return self.win and vim.api.nvim_win_is_valid(self.win)
+end
+
+---Open the dashboard
+function PlugmanDashboard:open()
+    if self:is_open() then
+        vim.api.nvim_set_current_win(self.win)
+        return
+    end
+
+    self:_create_window()
+    self:_setup_keymaps()
+    self:_setup_autocmds()
+    self:refresh()
+    self:_start_auto_refresh()
+end
+
+---Create the dashboard window
+function PlugmanDashboard:_create_window()
+    self.buf = vim.api.nvim_create_buf(false, true)
+
+    local width = math.floor(vim.o.columns * 0.9)
+    local height = math.floor(vim.o.lines * 0.9)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    self.win = vim.api.nvim_open_win(self.buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = ' Plugman Dashboard ',
+        title_pos = 'center',
+    })
+
+    -- Set buffer options
+    vim.api.nvim_buf_set_option(self.buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(self.buf, 'filetype', 'plugman-dashboard')
+    vim.api.nvim_buf_set_option(self.buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(self.buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(self.buf, 'swapfile', false)
+
+    -- Window options
+    vim.api.nvim_win_set_option(self.win, 'wrap', false)
+    vim.api.nvim_win_set_option(self.win, 'cursorline', true)
+    vim.api.nvim_win_set_option(self.win, 'number', false)
+    vim.api.nvim_win_set_option(self.win, 'relativenumber', false)
+    vim.api.nvim_win_set_option(self.win, 'signcolumn', 'no')
+
+    -- Initialize activity log
+    self.activity_log = {}
+end
+
+---Refresh dashboard content
+function PlugmanDashboard:refresh()
+    if not self:is_open() then
+        return
+    end
+
+    local lines = {}
+    local highlights = {}
+    local line_num = 0
+
+    -- Render each section
+    for _, section in ipairs(self.sections) do
+        local section_lines, section_highlights = self:_render_section(section, line_num)
+
+        for _, line in ipairs(section_lines) do
+            table.insert(lines, line)
+            line_num = line_num + 1
+        end
+
+        for _, hl in ipairs(section_highlights) do
+            table.insert(highlights, hl)
+        end
+    end
+
+    -- Update buffer content
+    vim.api.nvim_buf_set_option(self.buf, 'modifiable', true)
+    vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_option(self.buf, 'modifiable', false)
+
+    -- Apply highlights
+    self:_apply_highlights(highlights)
+
+    -- Update cursor position if needed
+    self:_update_cursor()
+end
+
+---Render a specific section
+---@param section string
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_section(section, start_line)
+    local lines = {}
+    local highlights = {}
+
+    if section == 'header' then
+        lines, highlights = self:_render_header(start_line)
+    elseif section == 'stats' then
+        lines, highlights = self:_render_stats(start_line)
+    elseif section == 'status' then
+        lines, highlights = self:_render_status(start_line)
+    elseif section == 'plugins' then
+        lines, highlights = self:_render_plugins(start_line)
+    elseif section == 'logs' then
+        lines, highlights = self:_render_logs(start_line)
+    elseif section == 'keymaps' then
+        lines, highlights = self:_render_keymaps(start_line)
+    end
+
+    return lines, highlights
+end
+
+---Render header section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_header(start_line)
+    local lines = {
+        '',
+        '╭─────────────────── Plugman Dashboard ────────────────────╮',
+        '│           A modern plugin manager for Neovim             │',
+        '╰──────────────────────────────────────────────────────────╯',
+        ''
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Title' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    return lines, highlights
+end
+
+---Render stats section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_stats(start_line)
+    local plugman = require('plugman')
+    local stats = plugman.api:stats()
+
+    local lines = {
+        '📊 Statistics',
+        string.rep('─', 60),
+        string.format('  Total Plugins: %d', stats.total),
+        string.format('  ✅ Loaded: %d', stats.loaded),
+        string.format('  ⏳ Lazy: %d', stats.lazy),
+        string.format('  ❌ Disabled: %d', stats.disabled),
+        string.format('  🚫 Errors: %d', stats.errors),
+        string.format('  ⚡ Load Time: %s', utils.format_time(stats.total_load_time)),
+        ''
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Function' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    -- Color code stats
+    local stat_colors = {
+        { pattern = '✅', hl_group = 'DiagnosticOk' },
+        { pattern = '⏳', hl_group = 'DiagnosticWarn' },
+        { pattern = '❌', hl_group = 'Comment' },
+        { pattern = '🚫', hl_group = 'DiagnosticError' },
+        { pattern = '⚡', hl_group = 'String' },
+    }
+
+    for i = 2, #lines - 1 do
+        for _, color in ipairs(stat_colors) do
+            local col_start, col_end = lines[i]:find(color.pattern)
+            if col_start then
+                table.insert(highlights, {
+                    line = start_line + i,
+                    col_start = col_start - 1,
+                    col_end = col_end,
+                    hl_group = color.hl_group
+                })
+            end
+        end
+    end
+
+    return lines, highlights
+end
+
+---Render status section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_status(start_line)
+    local lines = {
+        '🔄 Recent Activity',
+        string.rep('─', 60),
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Function' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    -- Show recent activity
+    local recent_count = math.min(5, #self.activity_log)
+    for i = #self.activity_log - recent_count + 1, #self.activity_log do
+        if self.activity_log[i] then
+            table.insert(lines, '  ' .. self.activity_log[i])
+        end
+    end
+
+    if recent_count == 0 then
+        table.insert(lines, '  No recent activity')
+        table.insert(highlights, {
+            line = start_line + #lines - 1,
+            col_start = 0,
+            col_end = -1,
+            hl_group = 'Comment'
+        })
+    end
+
+    table.insert(lines, '')
+
+    return lines, highlights
+end
+
+---Render plugins section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_plugins(start_line)
+    local plugman = require('plugman')
+    local lines = {
+        string.format('🔌 Plugins (Sort: %s %s) [Filter: %s]',
+            self.sort_by,
+            self.sort_desc and '↓' or '↑',
+            self.filter == '' and 'none' or self.filter),
+        string.rep('─', 80),
+        string.format('%-3s %-25s %-10s %-8s %-12s %s',
+            '', 'Name', 'Status', 'Load', 'Priority', 'Source'),
+        string.rep('─', 80),
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Function' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+        { line = start_line + 2, col_start = 0, col_end = -1, hl_group = 'Identifier' },
+        { line = start_line + 3, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    -- Get filtered and sorted plugins
+    local plugins_list = self:_get_filtered_plugins(plugman.plugins)
+    self:_sort_plugins(plugins_list)
+
+    -- Store plugin lines for navigation
+    self.plugin_lines = {}
+
+    for i, plugin in ipairs(plugins_list) do
+        local status_icon = self:_get_status_icon(plugin)
+        local status_text = self:_get_status_text(plugin)
+        local load_time = plugin.loaded and utils.format_time(plugin.load_time) or '-'
+        local priority = tostring(plugin.priority)
+        local source = plugin.source:sub(1, 30) .. (plugin.source:len() > 30 and '...' or '')
+
+        local cursor_indicator = (i == self.selected_plugin) and '►' or ' '
+
+        local line = string.format('%s %s %-25s %-10s %-8s %-12s %s',
+            cursor_indicator,
+            status_icon,
+            plugin.name:sub(1, 24),
+            status_text,
+            load_time,
+            priority,
+            source
+        )
+
+        table.insert(lines, line)
+        table.insert(self.plugin_lines, {
+            plugin = plugin,
+            line_num = start_line + #lines - 1
+        })
+
+        -- Add highlights for status
+        local hl_group = self:_get_status_highlight(plugin)
+        table.insert(highlights, {
+            line = start_line + #lines - 1,
+            col_start = 2,
+            col_start = 3,
+            hl_group = hl_group
+        })
+
+        -- Highlight selected line
+        if i == self.selected_plugin then
+            table.insert(highlights, {
+                line = start_line + #lines - 1,
+                col_start = 0,
+                col_end = 1,
+                hl_group = 'Visual'
+            })
+        end
+    end
+
+    table.insert(lines, '')
+
+    return lines, highlights
+end
+
+---Render logs section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_logs(start_line)
+    local logger = require('plugman.logger')
+    local recent_logs = logger:get_recent(10)
+
+    local lines = {
+        '📋 Recent Logs',
+        string.rep('─', 60),
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Function' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    for _, log_entry in ipairs(recent_logs) do
+        local prefix = string.format('[%s] %s:', log_entry.timestamp, log_entry.level:upper())
+        local line = string.format('  %s %s', prefix, log_entry.message)
+        table.insert(lines, line)
+
+        -- Color code by log level
+        local hl_group = 'Normal'
+        if log_entry.level == 'error' then
+            hl_group = 'DiagnosticError'
+        elseif log_entry.level == 'warn' then
+            hl_group = 'DiagnosticWarn'
+        elseif log_entry.level == 'info' then
+            hl_group = 'DiagnosticInfo'
+        elseif log_entry.level == 'debug' then
+            hl_group = 'Comment'
+        end
+
+        table.insert(highlights, {
+            line = start_line + #lines - 1,
+            col_start = 2,
+            col_end = 2 + #prefix,
+            hl_group = hl_group
+        })
+    end
+
+    table.insert(lines, '')
+
+    return lines, highlights
+end
+
+---Render keymaps section
+---@param start_line number
+---@return table, table
+function PlugmanDashboard:_render_keymaps(start_line)
+    local keymaps = {
+        { key = 'q',       desc = 'Close dashboard' },
+        { key = '<Esc>',   desc = 'Close dashboard' },
+        { key = 'r',       desc = 'Refresh' },
+        { key = 'j/k',     desc = 'Navigate plugins' },
+        { key = '<Enter>', desc = 'Plugin details' },
+        { key = 's',       desc = 'Sync plugins' },
+        { key = 'c',       desc = 'Clean plugins' },
+        { key = 'i',       desc = 'Install plugin' },
+        { key = 'd',       desc = 'Remove plugin' },
+        { key = 't',       desc = 'Toggle plugin' },
+        { key = '/',       desc = 'Filter plugins' },
+        { key = 'o',       desc = 'Sort options' },
+        { key = 'l',       desc = 'View logs' },
+        { key = 'h',       desc = 'Health check' },
+    }
+
+    local lines = {
+        '⌨️  Keymaps',
+        string.rep('─', 40),
+    }
+
+    local highlights = {
+        { line = start_line,     col_start = 0, col_end = -1, hl_group = 'Function' },
+        { line = start_line + 1, col_start = 0, col_end = -1, hl_group = 'Comment' },
+    }
+
+    for _, keymap in ipairs(keymaps) do
+        local line = string.format('  %-10s %s', keymap.key, keymap.desc)
+        table.insert(lines, line)
+
+        -- Highlight key
+        table.insert(highlights, {
+            line = start_line + #lines - 1,
+            col_start = 2,
+            col_end = 2 + #keymap.key,
+            hl_group = 'Special'
+        })
+    end
+
+    return lines, highlights
+end
+
+---Apply highlights to buffer
+---@param highlights table
+function PlugmanDashboard:_apply_highlights(highlights)
+    -- Clear existing highlights
+    vim.api.nvim_buf_clear_namespace(self.buf, -1, 0, -1)
+
+    -- Apply new highlights
+    for _, hl in ipairs(highlights) do
+        vim.api.nvim_buf_add_highlight(self.buf, -1, hl.hl_group, hl.line, hl.col_start, hl.col_end)
+    end
+end
+
+---Get filtered plugins based on current filter settings
+---@param plugins table
+---@return table
+function PlugmanDashboard:_get_filtered_plugins(plugins)
+    local filtered = {}
+
+    for _, plugin in pairs(plugins) do
+        local include = true
+
+        -- Filter by disabled status
+        if not self.show_disabled and not plugin.enabled then
+            include = false
+        end
+
+        -- Filter by lazy status
+        if not self.show_lazy and plugin.lazy then
+            include = false
+        end
+
+        -- Filter by search term
+        if self.filter ~= '' then
+            local search_text = (plugin.name .. ' ' .. plugin.source):lower()
+            if not search_text:find(self.filter:lower(), 1, true) then
+                include = false
+            end
+        end
+
+        if include then
+            table.insert(filtered, plugin)
+        end
+    end
+
+    return filtered
+end
+
+---Sort plugins based on current sort settings
+---@param plugins table
+function PlugmanDashboard:_sort_plugins(plugins)
+    table.sort(plugins, function(a, b)
+        local result
+
+        if self.sort_by == 'name' then
+            result = a.name < b.name
+        elseif self.sort_by == 'status' then
+            result = a:status() < b:status()
+        elseif self.sort_by == 'load_time' then
+            result = a.load_time < b.load_time
+        elseif self.sort_by == 'priority' then
+            result = a.priority < b.priority
+        else
+            result = a.name < b.name
+        end
+
+        return self.sort_desc and not result or result
+    end)
+end
+
+---Get status icon for plugin
+---@param plugin PlugmanPlugin
+---@return string
+function PlugmanDashboard:_get_status_icon(plugin)
+    local status = plugin:status()
+
+    if status == 'loaded' then
+        return '●'
+    elseif status == 'error' then
+        return '✗'
+    elseif status == 'disabled' then
+        return '○'
+    else
+        return '⋯'
+    end
+end
+
+---Get status text for plugin
+---@param plugin PlugmanPlugin
+---@return string
+function PlugmanDashboard:_get_status_text(plugin)
+    local status = plugin:status()
+
+    if status == 'loaded' then
+        return plugin.lazy and 'lazy' or 'loaded'
+    elseif status == 'error' then
+        return 'error'
+    elseif status == 'disabled' then
+        return 'disabled'
+    else
+        return 'pending'
+    end
+end
+
+---Get status highlight group for plugin
+---@param plugin PlugmanPlugin
+---@return string
+function PlugmanDashboard:_get_status_highlight(plugin)
+    local status = plugin:status()
+
+    if status == 'loaded' then
+        return 'DiagnosticOk'
+    elseif status == 'error' then
+        return 'DiagnosticError'
+    elseif status == 'disabled' then
+        return 'Comment'
+    else
+        return 'DiagnosticWarn'
+    end
+end
+
+---Setup dashboard keymaps
+function PlugmanDashboard:_setup_keymaps()
+    local opts = { buffer = self.buf, nowait = true, silent = true }
+
+    -- Navigation
+    vim.keymap.set('n', 'q', function() self:close() end, opts)
+    vim.keymap.set('n', '<Esc>', function() self:close() end, opts)
+    vim.keymap.set('n', 'r', function() self:refresh() end, opts)
+    vim.keymap.set('n', 'j', function() self:_navigate_plugin(1) end, opts)
+    vim.keymap.set('n', 'k', function() self:_navigate_plugin(-1) end, opts)
+    vim.keymap.set('n', '<Down>', function() self:_navigate_plugin(1) end, opts)
+    vim.keymap.set('n', '<Up>', function() self:_navigate_plugin(-1) end, opts)
+
+    -- Plugin actions
+    vim.keymap.set('n', '<Enter>', function() self:_show_plugin_details() end, opts)
+    vim.keymap.set('n', 's', function() self:_sync_plugins() end, opts)
+    vim.keymap.set('n', 'c', function() self:_clean_plugins() end, opts)
+    vim.keymap.set('n', 'i', function() self:_install_plugin() end, opts)
+    vim.keymap.set('n', 'd', function() self:_remove_plugin() end, opts)
+    vim.keymap.set('n', 't', function() self:_toggle_plugin() end, opts)
+
+    -- Filtering and sorting
+    vim.keymap.set('n', '/', function() self:_filter_plugins() end, opts)
+    vim.keymap.set('n', 'o', function() self:_sort_options() end, opts)
+
+    -- Other actions
+    vim.keymap.set('n', 'l', function() self:_view_logs() end, opts)
+    vim.keymap.set('n', 'h', function() self:_health_check() end, opts)
+    vim.keymap.set('n', 'R', function() self:_reload_config() end, opts)
+end
+
+---Setup dashboard autocmds
+function PlugmanDashboard:_setup_autocmds()
+    local group = vim.api.nvim_create_augroup('PlugmanDashboardBuffer', { clear = true })
+
+    -- Close dashboard when buffer is deleted
+    vim.api.nvim_create_autocmd('BufDelete', {
+        group = group,
+        buffer = self.buf,
+        callback = function()
+            self:close()
+        end,
+    })
+
+    -- Handle window resize
+    vim.api.nvim_create_autocmd('VimResized', {
+        group = group,
+        callback = function()
+            if self:is_open() then
+                self:refresh()
+            end
+        end,
+    })
+end
+
+---Start auto-refresh timer
+function PlugmanDashboard:_start_auto_refresh()
+    if self.update_timer then
+        self.update_timer:stop()
+    end
+
+    if self.auto_refresh then
+        self.update_timer = vim.loop.new_timer()
+        self.update_timer:start(self.refresh_interval, self.refresh_interval, vim.schedule_wrap(function()
+            if self:is_open() then
+                self:refresh()
+            else
+                self:_stop_auto_refresh()
+            end
+        end))
+    end
+end
+
+---Stop auto-refresh timer
+function PlugmanDashboard:_stop_auto_refresh()
+    if self.update_timer then
+        self.update_timer:stop()
+        self.update_timer = nil
+    end
+end
+
+---Navigate plugin selection
+---@param direction number
+function PlugmanDashboard:_navigate_plugin(direction)
+    if not self.plugin_lines or #self.plugin_lines == 0 then
+        return
+    end
+
+    self.selected_plugin = math.max(1, math.min(#self.plugin_lines, self.selected_plugin + direction))
+
+    -- Update cursor position
+    local line_info = self.plugin_lines[self.selected_plugin]
+    if line_info then
+        vim.api.nvim_win_set_cursor(self.win, { line_info.line_num + 1, 0 })
+    end
+
+    self:refresh()
+end
+
+---Update cursor position
+function PlugmanDashboard:_update_cursor()
+    if not self.plugin_lines or #self.plugin_lines == 0 then
+        return
+    end
+
+    local line_info = self.plugin_lines[self.selected_plugin]
+    if line_info then
+        vim.api.nvim_win_set_cursor(self.win, { line_info.line_num + 1, 0 })
+    end
+end
+
+---Show plugin details
+function PlugmanDashboard:_show_plugin_details()
+    if not self.plugin_lines or #self.plugin_lines == 0 then
+        return
+    end
+
+    local line_info = self.plugin_lines[self.selected_plugin]
+    if not line_info then
+        return
+    end
+
+    local plugin = line_info.plugin
+
+    -- Create plugin details popup
+    local details = {
+        'Plugin Details',
+        string.rep('═', 50),
+        '',
+        'Name: ' .. plugin.name,
+        'Source: ' .. plugin.source,
+        'Status: ' .. plugin:status(),
+        'Lazy: ' .. (plugin.lazy and 'yes' or 'no'),
+        'Priority: ' .. plugin.priority,
+        'Enabled: ' .. (plugin.enabled and 'yes' or 'no'),
+        'Load Time: ' .. (plugin.loaded and utils.format_time(plugin.load_time) or 'not loaded'),
+        '',
+        'Dependencies: ' .. (next(plugin.depends) and table.concat(plugin.depends, ', ') or 'none'),
+        'Events: ' .. (next(plugin.events) and table.concat(plugin.events, ', ') or 'none'),
+        'Commands: ' .. (next(plugin.commands) and table.concat(plugin.commands, ', ') or 'none'),
+        'Filetypes: ' .. (next(plugin.filetypes) and table.concat(plugin.filetypes, ', ') or 'none'),
+        '',
+        'Configuration:',
+        vim.inspect(plugin.opts, { indent = '  ' }),
+    }
+
+    -- Show in floating window
+    local popup_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(popup_buf, 0, -1, false, details)
+    vim.api.nvim_buf_set_option(popup_buf, 'filetype', 'yaml')
+    vim.api.nvim_buf_set_option(popup_buf, 'modifiable', false)
+
+    local popup_win = vim.api.nvim_open_win(popup_buf, true, {
+        relative = 'editor',
+        width = math.min(80, vim.o.columns - 10),
+        height = math.min(#details + 2, vim.o.lines - 10),
+        row = math.floor((vim.o.lines - #details) / 2),
+        col = math.floor((vim.o.columns - 80) / 2),
+        style = 'minimal',
+        border = 'rounded',
+        title = ' ' .. plugin.name .. ' ',
+        title_pos = 'center',
+    })
+
+    vim.keymap.set('n', 'q', function()
+        vim.api.nvim_win_close(popup_win, true)
+    end, { buffer = popup_buf })
+end
+
+---Close dashboard
+function PlugmanDashboard:close()
+    self:_stop_auto_refresh()
+
+    if self.win and vim.api.nvim_win_is_valid(self.win) then
+        vim.api.nvim_win_close(self.win, true)
+    end
+
+    self.win = nil
+    self.buf = nil
+end
+
+-- Additional action methods would be implemented here
+-- (sync, clean, install, remove, toggle, filter, etc.)
+
+return PlugmanDashboard
+
+
+-- ---@class PlugmanDashboard
+-- local PlugmanDashboard = {}
+-- PlugmanDashboard.__index = PlugmanDashboard
+
+-- local utils = require('plugman.core.utils')
+
+-- ---Create new dashboard instance
+-- ---@param config PlugmanConfig
+-- ---@return PlugmanDashboard
+-- function PlugmanDashboard:new(config)
+--     local dashboard = setmetatable({}, self)
+--     dashboard.config = config
+--     dashboard.buf = nil
+--     dashboard.win = nil
+--     dashboard.state = {
+--         view = 'overview', -- overview, plugins, logs, health, benchmark
+--         selected_plugin = nil,
+--         filter = '',
+--         sort_by = 'name', -- name, status, load_time, source
+--         sort_desc = false,
+--         auto_refresh = true,
+--         refresh_timer = nil,
+--     }
+--     dashboard.logs = {}
+--     dashboard.max_logs = 1000
+
+--     -- Real-time update handlers
+--     dashboard.update_handlers = {}
+--     dashboard:_setup_update_handlers()
+
+--     return dashboard
+-- end
+
+-- ---Setup real-time update handlers
+-- function PlugmanDashboard:_setup_update_handlers()
+--     -- Plugin loaded event
+--     vim.api.nvim_create_autocmd('User', {
+--         pattern = 'PlugmanPluginLoaded',
+--         callback = function(ev)
+--             self:_log('info', string.format('Plugin loaded: %s (%.2fms)',
+--                 ev.data.name, ev.data.plugin.load_time))
+--             self:_refresh_if_visible()
+--         end,
+--     })
+
+--     -- Plugin install/update events
+--     vim.api.nvim_create_autocmd('User', {
+--         pattern = { 'PlugmanPluginInstalled', 'PlugmanPluginUpdated' },
+--         callback = function(ev)
+--             self:_log('info', string.format('Plugin %s: %s',
+--                 ev.match == 'PlugmanPluginInstalled' and 'installed' or 'updated',
+--                 ev.data.name))
+--             self:_refresh_if_visible()
+--         end,
+--     })
+
+--     -- Plugin error events
+--     vim.api.nvvm_create_autocmd('User', {
+--         pattern = 'PlugmanPluginError',
+--         callback = function(ev)
+--             self:_log('error', string.format('Plugin error: %s - %s',
+--                 ev.data.name, ev.data.error))
+--             self:_refresh_if_visible()
+--         end,
+--     })
+-- end
+
+-- ---Open the dashboard
+-- function PlugmanDashboard:open()
+--     if self.buf and vim.api.nvim_buf_is_valid(self.buf) then
+--         local wins = vim.api.nvim_list_wins()
+--         for _, win in ipairs(wins) do
+--             if vim.api.nvim_win_get_buf(win) == self.buf then
+--                 vim.api.nvim_set_current_win(win)
+--                 return
+--             end
+--         end
+--     end
+
+--     self:_create_window()
+--     self:_render()
+--     self:_setup_keymaps()
+--     self:_start_auto_refresh()
+-- end
+
+-- ---Create the dashboard window
+-- function PlugmanDashboard:_create_window()
+--     self.buf = vim.api.nvim_create_buf(false, true)
+
+--     local width = math.floor(vim.o.columns * 0.9)
+--     local height = math.floor(vim.o.lines * 0.85)
+--     local row = math.floor((vim.o.lines - height) / 2)
+--     local col = math.floor((vim.o.columns - width) / 2)
+
+--     self.win = vim.api.nvim_open_win(self.buf, true, {
+--         relative = 'editor',
+--         width = width,
+--         height = height,
+--         row = row,
+--         col = col,
+--         style = 'minimal',
+--         border = 'rounded',
+--         title = ' 🔌 Plugman Dashboard ',
+--         title_pos = 'center',
+--     })
+
+--     -- Set buffer options
+--     vim.api.nvim_buf_set_option(self.buf, 'bufhidden', 'wipe')
+--     vim.api.nvim_buf_set_option(self.buf, 'filetype', 'plugman-dashboard')
+--     vim.api.nvim_buf_set_option(self.buf, 'modifiable', false)
+--     vim.api.nvim_buf_set_option(self.buf, 'buftype', 'nofile')
+
+--     -- Window options
+--     vim.api.nvim_win_set_option(self.win, 'wrap', false)
+--     vim.api.nvim_win_set_option(self.win, 'cursorline', true)
+-- end
+
+-- ---Render the dashboard content
+-- function PlugmanDashboard:_render()
+--     if not self.buf or not vim.api.nvim_buf_is_valid(self.buf) then
+--         return
+--     end
+
+--     local lines = {}
+--     local highlights = {}
+
+--     -- Header with navigation
+--     local header = self:_render_header()
+--     vim.list_extend(lines, header.lines)
+--     vim.list_extend(highlights, header.highlights)
+
+--     -- Content based on current view
+--     local content
+--     if self.state.view == 'overview' then
+--         content = self:_render_overview()
+--     elseif self.state.view == 'plugins' then
+--         content = self:_render_plugins()
+--     elseif self.state.view == 'logs' then
+--         content = self:_render_logs()
+--     elseif self.state.view == 'health' then
+--         content = self:_render_health()
+--     elseif self.state.view == 'benchmark' then
+--         content = self:_render_benchmark()
+--     end
+
+--     if content then
+--         vim.list_extend(lines, content.lines)
+--         vim.list_extend(highlights, content.highlights)
+--     end
+
+--     -- Footer with keybindings
+--     local footer = self:_render_footer()
+--     vim.list_extend(lines, footer.lines)
+--     vim.list_extend(highlights, footer.highlights)
+
+--     -- Apply content to buffer
+--     vim.api.nvim_buf_set_option(self.buf, 'modifiable', true)
+--     vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
+--     vim.api.nvim_buf_set_option(self.buf, 'modifiable', false)
+
+--     -- Apply highlights
+--     vim.api.nvim_buf_clear_namespace(self.buf, -1, 0, -1)
+--     for _, hl in ipairs(highlights) do
+--         vim.api.nvim_buf_add_highlight(self.buf, -1, hl.group, hl.line, hl.col_start, hl.col_end)
+--     end
+-- end
+
+-- ---Render header with navigation
+-- ---@return table
+-- function PlugmanDashboard:_render_header()
+--     local lines = {}
+--     local highlights = {}
+
+--     -- Title bar
+--     local title = string.format('╭─ Plugman Dashboard ─ %s ─╮',
+--         os.date('%H:%M:%S'))
+--     table.insert(lines, title)
+--     table.insert(highlights, {
+--         group = 'Title',
+--         line = #lines - 1,
+--         col_start = 0,
+--         col_end = #title
+--     })
+
+--     -- Navigation tabs
+--     local tabs = { 'overview', 'plugins', 'logs', 'health', 'benchmark' }
+--     local nav_line = '│ '
+
+--     for i, tab in ipairs(tabs) do
+--         local display = tab:gsub('^%l', string.upper)
+--         if tab == self.state.view then
+--             nav_line = nav_line .. string.format('[%s]', display)
+--             -- Highlight active tab
+--             table.insert(highlights, {
+--                 group = 'TabLineSel',
+--                 line = #lines,
+--                 col_start = #nav_line - #display - 2,
+--                 col_end = #nav_line
+--             })
+--         else
+--             nav_line = nav_line .. string.format(' %s ', display)
+--         end
+
+--         if i < #tabs then
+--             nav_line = nav_line .. ' │ '
+--         end
+--     end
+
+--     nav_line = nav_line .. string.rep(' ', vim.api.nvim_win_get_width(self.win) - #nav_line - 3) .. ' │'
+--     table.insert(lines, nav_line)
+
+--     table.insert(lines, '├' .. string.rep('─', vim.api.nvim_win_get_width(self.win) - 2) .. '┤')
+--     table.insert(lines, '')
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render overview page
+-- ---@return table
+-- function PlugmanDashboard:_render_overview()
+--     local lines = {}
+--     local highlights = {}
+--     local plugman = require('plugman')
+
+--     -- Statistics section
+--     local stats = plugman.api:stats()
+--     local system_info = utils.get_system_info()
+
+--     table.insert(lines, '📊 Statistics')
+--     table.insert(lines, string.rep('─', 50))
+--     table.insert(lines, string.format('Total Plugins:     %d', stats.total))
+--     table.insert(lines, string.format('Loaded:           %d (%.1f%%)',
+--         stats.loaded, stats.total > 0 and (stats.loaded / stats.total * 100) or 0))
+--     table.insert(lines, string.format('Lazy:             %d', stats.lazy))
+--     table.insert(lines, string.format('Disabled:         %d', stats.disabled))
+--     table.insert(lines, string.format('Errors:           %d', stats.errors))
+--     table.insert(lines, string.format('Total Load Time:  %s', utils.format_time(stats.total_load_time)))
+--     table.insert(lines, '')
+
+--     -- System info
+--     table.insert(lines, '💻 System Information')
+--     table.insert(lines, string.rep('─', 50))
+--     table.insert(lines, string.format('OS:               %s', system_info.os))
+--     table.insert(lines,
+--         string.format('Neovim:           %s',
+--             vim.version().major .. '.' .. vim.version().minor .. '.' .. vim.version().patch))
+--     table.insert(lines, string.format('Git Available:    %s', system_info.has_git and '✓' or '✗'))
+--     table.insert(lines, string.format('Config Path:      %s', system_info.config_path))
+--     table.insert(lines, '')
+
+--     -- Recent activity
+--     table.insert(lines, '📝 Recent Activity')
+--     table.insert(lines, string.rep('─', 50))
+
+--     local recent_logs = {}
+--     for i = math.max(1, #self.logs - 9), #self.logs do
+--         if self.logs[i] then
+--             table.insert(recent_logs, self.logs[i])
+--         end
+--     end
+
+--     if #recent_logs == 0 then
+--         table.insert(lines, 'No recent activity')
+--     else
+--         for _, log in ipairs(recent_logs) do
+--             local icon = log.level == 'error' and '✗' or log.level == 'warn' and '⚠' or 'ℹ'
+--             local line = string.format('%s %s %s',
+--                 os.date('%H:%M:%S', log.timestamp), icon, log.message)
+--             table.insert(lines, line)
+
+--             -- Color code by log level
+--             local hl_group = log.level == 'error' and 'DiagnosticError' or
+--                 log.level == 'warn' and 'DiagnosticWarn' or
+--                 'DiagnosticInfo'
+--             table.insert(highlights, {
+--                 group = hl_group,
+--                 line = #lines - 1,
+--                 col_start = 9,
+--                 col_end = 10
+--             })
+--         end
+--     end
+
+--     -- Performance metrics
+--     table.insert(lines, '')
+--     table.insert(lines, '⚡ Performance')
+--     table.insert(lines, string.rep('─', 50))
+
+--     local avg_load_time = stats.loaded > 0 and (stats.total_load_time / stats.loaded) or 0
+--     table.insert(lines, string.format('Average Load Time: %s', utils.format_time(avg_load_time)))
+
+--     -- Top 5 slowest plugins
+--     local plugins_by_time = {}
+--     for _, plugin in pairs(plugman.plugins) do
+--         if plugin.loaded and plugin.load_time > 0 then
+--             table.insert(plugins_by_time, plugin)
+--         end
+--     end
+
+--     table.sort(plugins_by_time, function(a, b) return a.load_time > b.load_time end)
+
+--     if #plugins_by_time > 0 then
+--         table.insert(lines, '')
+--         table.insert(lines, 'Slowest Plugins:')
+--         for i = 1, math.min(5, #plugins_by_time) do
+--             local plugin = plugins_by_time[i]
+--             table.insert(lines, string.format('  %d. %s (%s)',
+--                 i, plugin.name, utils.format_time(plugin.load_time)))
+--         end
+--     end
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render plugins page
+-- ---@return table
+-- function PlugmanDashboard:_render_plugins()
+--     local lines = {}
+--     local highlights = {}
+--     local plugman = require('plugman')
+
+--     -- Filter and sort controls
+--     table.insert(lines, string.format('🔍 Filter: %s | Sort: %s %s',
+--         self.state.filter == '' and '(none)' or self.state.filter,
+--         self.state.sort_by,
+--         self.state.sort_desc and '↓' or '↑'))
+--     table.insert(lines, string.rep('─', 80))
+
+--     -- Plugin list header
+--     local header = string.format('%-3s %-25s %-12s %-10s %s',
+--         'St', 'Name', 'Load Time', 'Priority', 'Source')
+--     table.insert(lines, header)
+--     table.insert(lines, string.rep('─', 80))
+
+--     table.insert(highlights, {
+--         group = 'Comment',
+--         line = #lines - 2,
+--         col_start = 0,
+--         col_end = #header
+--     })
+
+--     -- Get and filter plugins
+--     local plugins_list = {}
+--     for _, plugin in pairs(plugman.plugins) do
+--         if self.state.filter == '' or
+--             plugin.name:lower():find(self.state.filter:lower()) or
+--             plugin.source:lower():find(self.state.filter:lower()) then
+--             table.insert(plugins_list, plugin)
+--         end
+--     end
+
+--     -- Sort plugins
+--     table.sort(plugins_list, function(a, b)
+--         local result
+--         if self.state.sort_by == 'name' then
+--             result = a.name < b.name
+--         elseif self.state.sort_by == 'status' then
+--             result = a:status() < b:status()
+--         elseif self.state.sort_by == 'load_time' then
+--             result = (a.load_time or 0) < (b.load_time or 0)
+--         elseif self.state.sort_by == 'source' then
+--             result = a.source < b.source
+--         else
+--             result = a.name < b.name
+--         end
+
+--         return self.state.sort_desc and not result or result
+--     end)
+
+--     -- Render plugin rows
+--     for i, plugin in ipairs(plugins_list) do
+--         local status_icon = self:_get_status_icon(plugin)
+--         local load_time_str = plugin.loaded and string.format('%.1fms', plugin.load_time) or '-'
+--         local priority_str = plugin.priority ~= 50 and tostring(plugin.priority) or '-'
+
+--         local line = string.format('%s %-25s %-12s %-10s %s',
+--             status_icon,
+--             #plugin.name > 25 and plugin.name:sub(1, 22) .. '...' or plugin.name,
+--             load_time_str,
+--             priority_str,
+--             plugin.source
+--         )
+
+--         table.insert(lines, line)
+
+--         -- Highlight status icon
+--         local hl_group = self:_get_status_highlight(plugin)
+--         table.insert(highlights, {
+--             group = hl_group,
+--             line = #lines - 1,
+--             col_start = 0,
+--             col_end = 3
+--         })
+
+--         -- Highlight selected plugin
+--         if plugin.name == self.state.selected_plugin then
+--             table.insert(highlights, {
+--                 group = 'CursorLine',
+--                 line = #lines - 1,
+--                 col_start = 0,
+--                 col_end = #line
+--             })
+--         end
+--     end
+
+--     if #plugins_list == 0 then
+--         table.insert(lines, 'No plugins match the current filter')
+--     end
+
+--     -- Plugin details for selected plugin
+--     if self.state.selected_plugin then
+--         local selected = plugman.plugins[self.state.selected_plugin]
+--         if selected then
+--             table.insert(lines, '')
+--             table.insert(lines, '📋 Plugin Details')
+--             table.insert(lines, string.rep('─', 50))
+--             table.insert(lines, string.format('Name:         %s', selected.name))
+--             table.insert(lines, string.format('Source:       %s', selected.source))
+--             table.insert(lines, string.format('Status:       %s', selected:status()))
+--             table.insert(lines, string.format('Lazy:         %s', selected.lazy and 'Yes' or 'No'))
+--             table.insert(lines, string.format('Priority:     %d', selected.priority))
+--             table.insert(lines, string.format('Load Time:    %s',
+--                 selected.loaded and utils.format_time(selected.load_time) or 'N/A'))
+
+--             if #selected.depends > 0 then
+--                 table.insert(lines, string.format('Dependencies: %s', table.concat(selected.depends, ', ')))
+--             end
+
+--             if #selected.events > 0 then
+--                 table.insert(lines, string.format('Events:       %s', table.concat(selected.events, ', ')))
+--             end
+
+--             if #selected.commands > 0 then
+--                 table.insert(lines, string.format('Commands:     %s', table.concat(selected.commands, ', ')))
+--             end
+
+--             if #selected.filetypes > 0 then
+--                 table.insert(lines, string.format('Filetypes:    %s', table.concat(selected.filetypes, ', ')))
+--             end
+
+--             if selected.error then
+--                 table.insert(lines, string.format('Error:        %s', selected.error))
+--                 table.insert(highlights, {
+--                     group = 'DiagnosticError',
+--                     line = #lines - 1,
+--                     col_start = 14,
+--                     col_end = #lines[#lines]
+--                 })
+--             end
+--         end
+--     end
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render logs page
+-- ---@return table
+-- function PlugmanDashboard:_render_logs()
+--     local lines = {}
+--     local highlights = {}
+
+--     table.insert(lines, string.format('📝 Logs (%d/%d)', #self.logs, self.max_logs))
+--     table.insert(lines, string.rep('─', 80))
+
+--     if #self.logs == 0 then
+--         table.insert(lines, 'No logs available')
+--     else
+--         -- Show recent logs first
+--         for i = #self.logs, math.max(1, #self.logs - 50), -1 do
+--             local log = self.logs[i]
+--             local timestamp = os.date('%H:%M:%S', log.timestamp)
+--             local level_icon = log.level == 'error' and '✗' or
+--                 log.level == 'warn' and '⚠' or
+--                 log.level == 'info' and 'ℹ' or '•'
+
+--             local line = string.format('[%s] %s %s', timestamp, level_icon, log.message)
+--             table.insert(lines, line)
+
+--             -- Color code by level
+--             local hl_group = log.level == 'error' and 'DiagnosticError' or
+--                 log.level == 'warn' and 'DiagnosticWarn' or
+--                 log.level == 'info' and 'DiagnosticInfo' or
+--                 'Comment'
+
+--             table.insert(highlights, {
+--                 group = hl_group,
+--                 line = #lines - 1,
+--                 col_start = 10,
+--                 col_end = 12
+--             })
+--         end
+--     end
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render health page
+-- ---@return table
+-- function PlugmanDashboard:_render_health()
+--     local lines = {}
+--     local highlights = {}
+--     local health = require('plugman.health')
+
+--     table.insert(lines, '🏥 Health Check')
+--     table.insert(lines, string.rep('─', 50))
+
+--     -- Run health checks
+--     local issues = {}
+--     local plugman = require('plugman')
+
+--     for name, plugin in pairs(plugman.plugins) do
+--         local plugin_issues = health.check_plugin(plugin)
+--         if #plugin_issues > 0 then
+--             issues[name] = plugin_issues
+--         end
+--     end
+
+--     if next(issues) then
+--         table.insert(lines, '⚠ Issues Found:')
+--         table.insert(lines, '')
+
+--         for name, plugin_issues in pairs(issues) do
+--             table.insert(lines, string.format('• %s:', name))
+--             for _, issue in ipairs(plugin_issues) do
+--                 table.insert(lines, string.format('  - %s', issue))
+--                 table.insert(highlights, {
+--                     group = 'DiagnosticWarn',
+--                     line = #lines - 1,
+--                     col_start = 0,
+--                     col_end = 4
+--                 })
+--             end
+--             table.insert(lines, '')
+--         end
+--     else
+--         table.insert(lines, '✓ All plugins are healthy!')
+--         table.insert(highlights, {
+--             group = 'DiagnosticOk',
+--             line = #lines - 1,
+--             col_start = 0,
+--             col_end = 1
+--         })
+--     end
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render benchmark page
+-- ---@return table
+-- function PlugmanDashboard:_render_benchmark()
+--     local lines = {}
+--     local highlights = {}
+--     local benchmark = require('plugman.benchmark')
+--     local plugman = require('plugman')
+
+--     table.insert(lines, '⚡ Performance Benchmark')
+--     table.insert(lines, string.rep('─', 50))
+
+--     -- Overall stats
+--     local stats = plugman.api:stats()
+--     table.insert(lines, string.format('Total Load Time: %s', utils.format_time(stats.total_load_time)))
+--     table.insert(lines, string.format('Average per Plugin: %s',
+--         utils.format_time(stats.loaded > 0 and stats.total_load_time / stats.loaded or 0)))
+--     table.insert(lines, '')
+
+--     -- Plugin load times sorted by performance
+--     table.insert(lines, 'Plugin Load Times:')
+--     table.insert(lines, '')
+
+--     local plugins_by_time = {}
+--     for _, plugin in pairs(plugman.plugins) do
+--         if plugin.loaded then
+--             table.insert(plugins_by_time, plugin)
+--         end
+--     end
+
+--     table.sort(plugins_by_time, function(a, b) return a.load_time > b.load_time end)
+
+--     for i, plugin in ipairs(plugins_by_time) do
+--         local bar_length = math.floor((plugin.load_time / (plugins_by_time[1].load_time or 1)) * 30)
+--         local bar = string.rep('█', bar_length) .. string.rep('░', 30 - bar_length)
+
+--         local line = string.format('%2d. %-25s %s %s',
+--             i, plugin.name, bar, utils.format_time(plugin.load_time))
+--         table.insert(lines, line)
+
+--         -- Color code the bar
+--         local hl_group = plugin.load_time > 10 and 'DiagnosticError' or
+--             plugin.load_time > 5 and 'DiagnosticWarn' or
+--             'DiagnosticOk'
+
+--         table.insert(highlights, {
+--             group = hl_group,
+--             line = #lines - 1,
+--             col_start = 29,
+--             col_end = 59
+--         })
+--     end
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Render footer with keybindings
+-- ---@return table
+-- function PlugmanDashboard:_render_footer()
+--     local lines = {}
+--     local highlights = {}
+
+--     table.insert(lines, '')
+--     table.insert(lines, '├' .. string.rep('─', vim.api.nvim_win_get_width(self.win) - 2) .. '┤')
+
+--     local keybinds = {
+--         'q:quit', 'r:refresh', '1-5:tabs', 'S:sync', 'C:clean', 'H:health', 'B:benchmark'
+--     }
+
+--     if self.state.view == 'plugins' then
+--         vim.list_extend(keybinds, { 'j/k:navigate', 'Enter:select', '/:filter', 's:sort' })
+--     end
+
+--     local footer_text = '│ ' .. table.concat(keybinds, ' │ ') .. ' │'
+--     footer_text = footer_text .. string.rep(' ', vim.api.nvim_win_get_width(self.win) - #footer_text - 1) .. '│'
+--     table.insert(lines, footer_text)
+
+--     table.insert(lines, '╰' .. string.rep('─', vim.api.nvim_win_get_width(self.win) - 2) .. '╯')
+
+--     table.insert(highlights, {
+--         group = 'Comment',
+--         line = #lines - 2,
+--         col_start = 0,
+--         col_end = #footer_text
+--     })
+
+--     return { lines = lines, highlights = highlights }
+-- end
+
+-- ---Setup dashboard keymaps
+-- function PlugmanDashboard:_setup_keymaps()
+--     local opts = { buffer = self.buf, nowait = true, silent = true }
+
+--     -- Navigation
+--     vim.keymap.set('n', 'q', function() self:close() end, opts)
+--     vim.keymap.set('n', '<Esc>', function() self:close() end, opts)
+--     vim.keymap.set('n', 'r', function() self:_render() end, opts)
+
+--     -- Tab navigation
+--     for i = 1, 5 do
+--         vim.keymap.set('n', tostring(i), function() self:_switch_tab(i) end, opts)
+--     end
+
+--     -- Actions
+--     vim.keymap.set('n', 'S', function() self:_sync_plugins() end, opts)
+--     vim.keymap.set('n', 'C', function() self:_clean_plugins() end, opts)
+--     vim.keymap.set('n', 'H', function() self:_run_health_check() end, opts)
+--     vim.keymap.set('n', 'B', function() self:_run_benchmark() end, opts)
+
+--     -- Plugin-specific navigation
+--     if self.state.view == 'plugins' then
+--         vim.keymap.set('n', 'j', function() self:_navigate_plugin(1) end, opts)
+--         vim.keymap.set('n', 'k', function() self:_navigate_plugin(-1) end, opts)
+--         vim.keymap.set('n', '<Down>', function() self:_navigate_plugin(1) end, opts)
+--         vim.keymap.set('n', '<Up>', function() self:_navigate_plugin(-1) end, opts)
+--         vim.keymap.set('n', '<Enter>', function() self:_select_plugin() end, opts)
+--         vim.keymap.set('n', '/', function() self:_filter_plugins() end, opts)
+--         vim.keymap.set('n', 's', function() self:_cycle_sort() end, opts)
+--     end
+
+--     -- Auto-refresh toggle
+--     vim.keymap.set('n', 'a', function() self:_toggle_auto_refresh() end, opts)
+-- end
+
+-- ---Close the dashboard
+-- function PlugmanDashboard:close()
+--     self:_stop_auto_refresh()
+
+--     if self.win and vim.api.nvim_win_is_valid(self.win) then
+--         vim.api.nvim_win_close(self.win, true)
+--     end
+
+--     self.win = nil
+--     self.buf = nil
+-- end
+
+-- ---Switch to tab by index
+-- ---@param index number
+-- function PlugmanDashboard:_switch_tab(index)
+--     local tabs = { 'overview', 'plugins', 'logs', 'health', 'benchmark' }
+--     if tabs[index] then
+--         self.state.view = tabs[index]
+--         self:_render()
+--     end
+-- end
+
+-- ---Start auto-refresh timer
+-- function PlugmanDashboard:_start_auto_refresh()
+--     if not self.state.auto_refresh then
+--         return
+--     end
+
+--     self.state.refresh_timer = vim.fn.timer_start(1000, function()
+--         if self.buf and vim.api.nvim_buf_is_valid(self.buf) then
+--             self:_render()
+--         else
+--             self:_stop_auto_refresh()
+--         end
+--     end, { ['repeat'] = -1 })
+-- end
+
+-- ---Stop auto-refresh timer
+-- function PlugmanDashboard:_stop_auto_refresh()
+--     if self.state.refresh_timer then
+--         vim.fn.timer_stop(self.state.refresh_timer)
+--         self.state.refresh_timer = nil
+--     end
+-- end
+
+-- ---Toggle auto-refresh
+-- function PlugmanDashboard:_toggle_auto_refresh()
+--     self.state.auto_refresh = not self.state.auto_refresh
+
+--     if self.state.auto_refresh then
+--         self:_start_auto_refresh()
+--         self:_log('info', 'Auto-refresh enabled')
+--     else
+--         self:_stop_auto_refresh()
+--         self:_log('info', 'Auto-refresh disabled')
+--     end
+-- end
+
+-- ---Log a message with real-time update
+-- ---@param level string
+-- ---@param message string
+-- function PlugmanDashboard:_log(level, message)
+--     table.insert(self.logs, {
+--         level = level,
+--         message = message,
+--         timestamp = os.time()
+--     })
+
+--     -- Trim logs if exceeding max
+--     if #self.logs > self.max_logs then
+--         table.remove(self.logs, 1)
+--     end
+-- end
+
+-- ---Refresh if dashboard is visible
+-- function PlugmanDashboard:_refresh_if_visible()
+--     if self.buf and vim.api.nvim_buf_is_valid(self.buf) then
+--         vim.schedule(function()
+--             self:_render()
+--         end)
+--     end
+-- end
+
+-- ---Get status icon for plugin
+-- ---@param plugin PlugmanPlugin
+-- ---@return string
+-- function PlugmanDashboard:_get_status_icon(plugin)
+--     local status = plugin:status()
+--     if status == 'loaded' then
+--         return '●'
+--     elseif status == 'error' then
+--         return '✗'
+--     elseif status == 'disabled' then
+--         return '○'
+--     else
+--         return '⋯'
+--     end
+-- end
+
+-- ---Get status highlight group
+-- ---@param plugin PlugmanPlugin
+-- ---@return string
+-- function PlugmanDashboard:_get_status_highlight(plugin)
+--     local status = plugin:status()
+--     if status == 'loaded' then
+--         return 'DiagnosticOk'
+--     elseif status == 'error' then
+--         return 'DiagnosticError'
+--     elseif status == 'disabled' then
+--         return 'Comment'
+--     else
+--         return 'DiagnosticWarn'
+--     end
+-- end
+
+-- ---Sync plugins with real-time updates
+-- function PlugmanDashboard:_sync_plugins()
+--     self:_log('info', 'Starting plugin sync...')
+
+--     vim.schedule(function()
+--         local plugman = require('plugman')
+--         plugman.api:sync()
+--         self:_log('info', 'Plugin sync completed')
+--     end)
+-- end
+
+-- ---Clean plugins
+-- function PlugmanDashboard:_clean_plugins()
+--     self:_log('info', 'Cleaning unused plugins...')
+
+--     vim.schedule(function()
+--         local plugman = require('plugman')
+--         plugman.api:clean()
+--         self:_log('info', 'Plugin cleanup completed')
+--     end)
+-- end
+
+-- ---Run health check
+-- function PlugmanDashboard:_run_health_check()
+--     self.state.view = 'health'
+--     self:_render()
+--     self:_log('info', 'Health check completed')
+-- end
+
+-- ---Run benchmark
+-- function PlugmanDashboard:_run_benchmark()
+--     self.state.view = 'benchmark'
+--     self:_render()
+--     self:_log('info', 'Benchmark completed')
+-- end
+
+-- return PlugmanDashboard
