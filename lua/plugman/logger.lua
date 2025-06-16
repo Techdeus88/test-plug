@@ -287,17 +287,27 @@ function PlugmanLogger:get_recent(count)
 
     -- Get entries from buffer
     local current_index = self.buffer_index
-    for i = 1, math.min(count, self.config.buffer_size) do
+    local buffer_size = self.config.buffer_size
+
+    -- Calculate how many entries we actually have
+    local total_entries = 0
+    for _ in pairs(self.buffer) do
+        total_entries = total_entries + 1
+    end
+
+    -- Adjust count to not exceed available entries
+    count = math.min(count, total_entries)
+
+    -- Get entries in reverse chronological order
+    for i = 1, count do
         local index = current_index - i
         if index < 1 then
-            index = index + self.config.buffer_size
+            index = index + buffer_size
         end
 
         local entry = self.buffer[index]
         if entry then
             table.insert(recent, 1, entry)
-        else
-            break
         end
     end
 
