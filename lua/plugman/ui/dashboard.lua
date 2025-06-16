@@ -366,7 +366,7 @@ function PlugmanDashboard:_render_plugins(start_line)
         table.insert(highlights, {
             line = start_line + #lines - 1,
             col_start = 2,
-            col_start = 3,
+            col_end = 3,
             hl_group = hl_group
         })
 
@@ -488,6 +488,9 @@ function PlugmanDashboard:_apply_highlights(highlights)
 
     -- Apply new highlights
     for _, hl in ipairs(highlights) do
+        if hl.col_end == -1 then
+            hl.col_end = 0
+        end
         vim.api.nvim_buf_add_highlight(self.buf, -1, hl.hl_group, hl.line, hl.col_start, hl.col_end)
     end
 end
