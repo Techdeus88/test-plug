@@ -1,5 +1,6 @@
 ---@class PlugmanLoader
 ---@field config PlugmanConfig
+---@field events PlugmanEvents
 ---@field loaded_plugins table<string, PlugmanPlugin>
 ---@field lazy_handlers table<string, function>
 local PlugmanLoader = {}
@@ -13,6 +14,7 @@ function PlugmanLoader:new(config)
   loader.config = config
   loader.loaded_plugins = {}
   loader.lazy_handlers = {}
+  loader.events = require('plugman.core.events').new(loader)
   return loader
 end
 
@@ -118,7 +120,7 @@ function PlugmanLoader:_setup_lazy_loading(plugin)
     self:_setup_command_trigger(plugin, cmd)
   end
 
-  -- Filetype xtriggers
+  -- Filetype triggers
   for _, ft in ipairs(plugin.ft) do
     self:_setup_filetype_trigger(plugin, ft)
   end
@@ -133,13 +135,10 @@ end
 ---@param plugin PlugmanPlugin
 ---@param event string
 function PlugmanLoader:_setup_event_trigger(plugin, event)
-  vim.api.nvim_create_autocmd(event, {
-    group = vim.api.nvim_create_augroup('PlugmanLazy_' .. plugin.name, {}),
-    once = true,
-    callback = function()
-      self:load_lazy_plugin(plugin.name)
-    end,
-  })
+  -- Use the Events module to handle the event
+  self.events:on_event(event, function()
+    self:load_lazy_plugin(plugin.name)
+  end, { priority = 100 }) -- High priority to ensure plugin loads before other handlers
 end
 
 ---Setup command trigger for lazy loading
@@ -173,21 +172,23 @@ end
 ---@param plugin PlugmanPlugin
 ---@param key table
 function PlugmanLoader:_setup_keymap_trigger(plugin, key)
-  local mode = key.mode or {'n'}
+  local modes = type(key.mode) == 'table' and key.mode or {key.mode or 'n'}
   local lhs = key.lhs or key[1]
   local rhs = key.rhs or key[2]
 
-  vim.keymap.set(mode, lhs, function()
-    self:load_lazy_plugin(plugin.name)
-    -- Re-execute the keymap after loading
-    vim.schedule(function()
-      if type(rhs) == 'string' then
-        vim.cmd(rhs)
-      elseif type(rhs) == 'function' then
-        rhs()
-      end
-    end)
-  end, { desc = key.desc })
+  for _, mode in ipairs(modes) do
+    vim.keymap.set(mode, lhs, function()
+      self:load_lazy_plugin(plugin.name)
+      -- Re-execute the keymap after loading
+      vim.schedule(function()
+        if type(rhs) == 'string' then
+          vim.cmd(rhs)
+        elseif type(rhs) == 'function' then
+          rhs()
+        end
+      end)
+    end, { desc = key.desc })
+  end
 end
 
 ---Load a lazy plugin by name

@@ -213,7 +213,7 @@ function M._setup_commands()
 
         vim.keymap.set('n', '<leader>pc', function()
             M.api:clean()
-        end, { desc = 'Clean Plugins' })
+        end, { desc = 'Cleans Plugins' })
 
         vim.keymap.set('n', '<leader>ph', function()
             health.report()
