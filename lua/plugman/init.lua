@@ -106,7 +106,9 @@ function M._scan_directory(dir, specs)
         if t_type == 'directory' then
             M._scan_directory(full_path, specs)
         elseif t_type == 'file' and name:match('%.lua$') then
-            local ok, spec = pcall(dofile, full_path)
+            local filename = vim.fn.fnamemodify(name, ':t:r')
+            local module_name = dir .. '.' .. filename
+            local ok, spec = pcall(require, module_name)
             if ok and spec then
                 if type(spec) == 'table' then
                     if type(spec[1]) == "string" then
