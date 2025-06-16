@@ -129,7 +129,7 @@ function PlugmanPlugin:install()
         return true
     end
 
-    local ok, err = Add({
+    local ok, _ = Add({
         source = self.source,
         depends = self.depends,
         hooks = self.hooks,
@@ -137,10 +137,9 @@ function PlugmanPlugin:install()
         monitor = self.monitor,
     })
     if not ok then
-        self.error = 'MiniDeps failed: ' .. err
+        self.error = 'MiniDeps failed: ' .. self.name
         return false
     end
-
 
     if ok then
         self.installed = self:is_installed()
