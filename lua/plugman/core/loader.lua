@@ -173,9 +173,9 @@ end
 ---@param plugin PlugmanPlugin
 ---@param key table
 function PlugmanLoader:_setup_keymap_trigger(plugin, key)
-  local mode = key.mode or key[1] or 'n'
-  local lhs = key.lhs or key[2]
-  local rhs = key.rhs or key[3]
+  local mode = key.mode or {'n'}
+  local lhs = key.lhs or key[1]
+  local rhs = key.rhs or key[2]
 
   vim.keymap.set(mode, lhs, function()
     self:load_lazy_plugin(plugin.name)
