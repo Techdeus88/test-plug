@@ -129,7 +129,7 @@ function PlugmanPlugin:install()
         return true
     end
 
-    local ok, err = MiniDeps.add({
+    local ok, err = Add({
         source = self.source,
         depends = self.depends,
         hooks = self.hooks,

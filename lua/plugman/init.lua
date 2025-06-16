@@ -48,7 +48,9 @@ function M.setup(opts)
         vim.cmd('packadd mini.deps | helptags ALL')
     end
 
-    require('mini.deps').setup({ path = { package = path_package } })
+    local MiniDeps = require('mini.deps')
+    MiniDeps.setup({ path = { package = path_package } })
+    Add, Now, Later = MiniDeps.add, MiniDeps.now, MiniDeps.later
 
     -- Initialize core components
     M.cache = core.Cache:new(M.Config)
