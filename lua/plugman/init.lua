@@ -109,14 +109,16 @@ function M._scan_directory(dir, specs)
             local ok, spec = pcall(dofile, full_path)
             if ok and spec then
                 if type(spec) == 'table' then
-                    if spec[1] or spec.source then
-                        table.insert(specs, spec)
-                    else
-                        -- Multiple specs in one file
+                    if type(spec[1]) == "string" then
+                        local s = spec
+                        table.insert(specs, s)
+                      else
                         for _, s in ipairs(spec) do
+                          if type(s) == "table" and type(s[1]) == "string" then
                             table.insert(specs, s)
+                          end
                         end
-                    end
+                      end
                 end
             end
         end
