@@ -87,7 +87,7 @@ function PlugmanLoader:_load_plugin(plugin)
     pattern = 'PlugmanPluginLoading',
     data = { name = plugin.name }
   })
-  -- local install_adk = plugin:install()
+  -- local install_ok = plugin:install()
   local load_ok = plugin:load(next_count)
 
   if load_ok then
@@ -109,7 +109,7 @@ function PlugmanLoader:_load_plugin(plugin)
   end
 
   self.load_order = next_count
-  return install_ok
+  return load_ok
 end
 
 ---Setup lazy loading for a plugin

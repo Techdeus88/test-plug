@@ -240,7 +240,7 @@ function PlugmanPlugin:load(current_count)
             end
         end
 
-        self.loaded = true
+        self.loaded = `
         self.load_count = current_count
         self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
     end
