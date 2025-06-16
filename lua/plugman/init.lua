@@ -99,13 +99,13 @@ function M._scan_directory(dir, specs)
     if not handle then return end
 
     while true do
-        local name, type = vim.loop.fs_scandir_next(handle)
+        local name, t_type = vim.loop.fs_scandir_next(handle)
         if not name then break end
 
         local full_path = dir .. '/' .. name
-        if type == 'directory' then
+        if t_type == 'directory' then
             M._scan_directory(full_path, specs)
-        elseif type == 'file' and name:match('%.lua$') then
+        elseif t_type == 'file' and name:match('%.lua$') then
             local ok, spec = pcall(dofile, full_path)
             if ok and spec then
                 if type(spec) == 'table' then
