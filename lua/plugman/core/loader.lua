@@ -88,9 +88,9 @@ function PlugmanLoader:_load_plugin(plugin)
     data = { name = plugin.name }
   })
   local install_ok = plugin:install()
-  -- local load_ok = plugin:load(next_count)
+  local load_ok = plugin:load(next_count)
 
-  if install_ok then -- load_ok
+  if install_ok and load_ok then
     self.loaded_plugins[plugin.name] = plugin
 
     -- Emit loaded event with timing info
