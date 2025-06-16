@@ -176,7 +176,7 @@ function PlugmanPlugin:_process_config(merged_opts)
         return self.config
     elseif type(self.config) == 'string' then
         return vim.cmd(self.config)
-    elseif merged_opts then
+    elseif self.config == nil and merged_opts then
         local mod_name = self.require or self.name
         local ok, mod = pcall(require, mod_name)
         if ok and mod.setup then
@@ -215,15 +215,11 @@ function PlugmanPlugin:load(current_count)
         end
 
         -- Setup plugin if opts provided
-        if self.config then
+        if self.config or self.opts then
             -- Handle configuration
             local merged_opts = self:_merge_config()
-            local setup_ok, setup_err = pcall(self._process_config, self, merged_opts)
-            if not setup_ok then
-                self.error = 'Setup failed: ' .. setup_err
-                return false
-            end
-            vim.notify(string.format("Config loaded: ", setup_ok))
+            self:_process_config(merged_opts)
+            vim.notify(string.format("Config loaded: %s", self.name))
         end
 
         -- Setup keymaps
