@@ -34,7 +34,7 @@ function PlugmanDashboard:new(config)
 
     -- Real-time update listeners
     dashboard.listeners = {}
-    dashboard:.setup_event_listeners()
+    dashboard:_setup_event_listeners()
 
     return dashboard
 end
