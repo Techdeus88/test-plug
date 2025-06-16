@@ -188,7 +188,7 @@ function PlugmanPlugin:_process_config(merged_opts)
 end
 
 ---Load the plugin
----@param load_count number The next iter of load_count so a plugin can load and attach itself to the global order
+---@param current_count number The next iter of load_count so a plugin can load and attach itself to the global order
 function PlugmanPlugin:load(current_count)
     if self.loaded or not self.enabled then
         return true
@@ -240,7 +240,7 @@ function PlugmanPlugin:load(current_count)
             end
         end
 
-        self.loaded = `
+        self.loaded = true
         self.load_count = current_count
         self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
     end
