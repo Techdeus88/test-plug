@@ -3,7 +3,6 @@ if vim.g.loaded_plugman then
   return
 end
 vim.g.loaded_plugman = 1
-
 if not vim.g.plugman_no_auto_setup then
   -- Auto-setup if config exists
   local config_path = vim.fn.stdpath('config') .. '/lua/plugman_config.lua'

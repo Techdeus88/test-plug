@@ -7,6 +7,7 @@
 local M = {}
 
 -- Export all core modules
+M.Events = require("plugman.core.events")
 M.Plugin = require('plugman.core.plugin')
 M.Loader = require('plugman.core.loader')
 M.Cache = require('plugman.core.cache')

@@ -1,5 +1,5 @@
 ---@class Plugman
----@field config PlugmanConfig
+---@field Config PlugmanConfig
 ---@field plugins table<string, PlugmanPlugin>
 ---@field cache PlugmanCache
 ---@field loader PlugmanLoader
@@ -7,16 +7,15 @@
 ---@field api PlugmanAPI
 local M = {}
 
-local config = require('plugman.config')
+local Config = require('plugman.Config')
 local core = require('plugman.core')
--- Add near the top after other requires
 local logger = require('plugman.logger')
 local ui = require('plugman.ui')
 local api = require('plugman.api')
 local health = require('plugman.health')
 local benchmark = require('plugman.benchmark')
 
-M.config = config
+M.Config = Config
 M.plugins = {}
 M.state = {
     initialized = false,
@@ -31,9 +30,9 @@ M.state = {
 ---Initialize Plugman
 ---@param opts? PlugmanConfig
 function M.setup(opts)
-    M.config = vim.tbl_deep_extend('force', config, opts or {})
+    M.Config = vim.tbl_deep_extend('force', Config, opts or {})
     -- Initialize logger
-    logger.setup(M.config)
+    logger.setup(M.Config)
     logger:info('Plugman initialization started')
 
     -- Initialize MiniDeps
@@ -52,9 +51,10 @@ function M.setup(opts)
     require('mini.deps').setup({ path = { package = path_package } })
 
     -- Initialize core components
-    M.cache = core.Cache:new(M.config)
-    M.loader = core.Loader:new(M.config)
-    M.ui = ui:new(M.config)
+    M.cache = core.Cache:new(M.Config)
+    M.events = core.Events.new(M.loader)
+    M.loader = core.Loader:new(M.Config)
+    M.ui = ui:new(M.Config)
     M.api = api:new(M)
 
     -- Load plugins
@@ -64,15 +64,15 @@ function M.setup(opts)
 
     M.state.initialized = true
 
-    if M.config.performance.benchmark_enabled then
+    if M.Config.performance.benchmark_enabled then
         benchmark.start()
     end
     logger:info('Plugman initialization completed')
 end
 
----Load plugin specifications from configured directory
+---Load plugin specifications from Configured directory
 function M._load_plugin_specs()
-    local plugins_path = vim.fn.stdpath('config') .. '/lua/' .. M.config.plugins_dir
+    local plugins_path = vim.fn.stdpath('Config') .. '/lua/' .. M.Config.plugins_dir
 
     if not vim.loop.fs_stat(plugins_path) then
         vim.notify('Plugman: plugins directory not found: ' .. plugins_path, vim.log.levels.WARN)
@@ -80,7 +80,7 @@ function M._load_plugin_specs()
     end
 
     local specs = {}
-    M._scan_directory(M.config.plugins_dir, specs)
+    M._scan_directory(M.Config.plugins_dir, specs)
 
     -- Convert specs to PlugmanPlugin objects
     for _, spec in ipairs(specs) do
@@ -98,7 +98,7 @@ function M._scan_directory(chosen_dir, specs)
     local plugins_dir = { chosen_dir }
 
     for _, dir in ipairs(plugins_dir) do
-        local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
+        local full_path = vim.fn.stdpath('Config') .. '/lua/' .. dir:gsub('%.', '/')
         if vim.fn.isdirectory(full_path) == 1 then
             local files = vim.fn.glob(full_path .. '/*.lua', false, true)
             for _, file in ipairs(files) do
