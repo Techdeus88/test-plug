@@ -1,7 +1,7 @@
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/ftplugin.vim
 Sourced 1 time
-Total time:   0.000046
- Self time:   0.000046
+Total time:   0.000024
+ Self time:   0.000024
 
 count  total (s)   self (s)
                             " Vim support file to switch on loading plugins for file types
@@ -10,8 +10,8 @@ count  total (s)   self (s)
                             " Last change:	2023 Aug 10
                             " Former Maintainer:	Bram Moolenaar <Bram@vim.org>
                             
-    1              0.000013 if exists("did_load_ftplugin")
-    1              0.000010   finish
+    1              0.000008 if exists("did_load_ftplugin")
+    1              0.000005   finish
                             endif
                             let did_load_ftplugin = 1
                             
@@ -46,8 +46,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/indent.vim
 Sourced 1 time
-Total time:   0.000035
- Self time:   0.000035
+Total time:   0.000020
+ Self time:   0.000020
 
 count  total (s)   self (s)
                             " Vim support file to switch on loading indent files for file types
@@ -56,8 +56,8 @@ count  total (s)   self (s)
                             " Last Change:	2023 Aug 10
                             " Former Maintainer:	Bram Moolenaar <Bram@vim.org>
                             
-    1              0.000010 if exists("did_indent_on")
-    1              0.000002   finish
+    1              0.000006 if exists("did_indent_on")
+    1              0.000001   finish
                             endif
                             let did_indent_on = 1
                             
@@ -86,8 +86,8 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/start/plugman.nvim/plugin/plugman.lua
 Sourced 3 times
-Total time:   0.001584
- Self time:   0.001584
+Total time:   0.000909
+ Self time:   0.000909
 
 count  total (s)   self (s)
                             -- Prevent loading twice
@@ -108,37 +108,37 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/shadow.nvim/colors/shadow.lua
 Sourced 1 time
-Total time:   0.000950
- Self time:   0.000950
+Total time:   0.000494
+ Self time:   0.000494
 
 count  total (s)   self (s)
                             require("shadow").setup()
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/plenary.nvim/plugin/plenary.vim
 Sourced 2 times
-Total time:   0.000171
- Self time:   0.000171
+Total time:   0.000107
+ Self time:   0.000107
 
 count  total (s)   self (s)
                             
                             " Create command for running busted
-    2              0.000046 command! -nargs=1 -complete=file PlenaryBustedFile
+    2              0.000028 command! -nargs=1 -complete=file PlenaryBustedFile
                                   \ lua require('plenary.test_harness').test_file([[<args>]])
                             
-    2              0.000019 command! -nargs=+ -complete=file PlenaryBustedDirectory
+    2              0.000012 command! -nargs=+ -complete=file PlenaryBustedDirectory
                                   \ lua require('plenary.test_harness').test_directory_command([[<args>]])
                             
-    2              0.000040 nnoremap <Plug>PlenaryTestFile :lua require('plenary.test_harness').test_file(vim.fn.expand("%:p"))<CR>
+    2              0.000026 nnoremap <Plug>PlenaryTestFile :lua require('plenary.test_harness').test_file(vim.fn.expand("%:p"))<CR>
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/filetype.lua
 Sourced 1 time
-Total time:   0.001056
- Self time:   0.000888
+Total time:   0.000576
+ Self time:   0.000469
 
 count  total (s)   self (s)
-    1              0.000006 if vim.g.did_load_filetypes then
-    1              0.000156   return
-    1              0.000002 end
+    1              0.000004 if vim.g.did_load_filetypes then
+    1              0.000100   return
+    1              0.000001 end
                             vim.g.did_load_filetypes = 1
                             
                             vim.api.nvim_create_augroup('filetypedetect', { clear = false })
@@ -201,16 +201,45 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/snacks.nvim/plugin/snacks.lua
 Sourced 2 times
-Total time:   0.004677
- Self time:   0.004677
+Total time:   0.003091
+ Self time:   0.003091
 
 count  total (s)   self (s)
                             require("snacks")
 
+SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/tabby.nvim/plugin/tabby.vim
+Sourced 2 times
+Total time:   0.000117
+ Self time:   0.000117
+
+count  total (s)   self (s)
+                            "" TODO
+    2              0.000013 function! TabbyCustomClickHandler(minwid, clicks, btn, modifiers) abort
+                                call luaeval(
+                                    \ "require'tabby.module.node'.handle_custom_click(_A[1], _A[2], _A[3], _A[4])",
+                                    \ [a:minwid, a:clicks, a:btn, a:modifiers]
+                                    \)
+                            endfunction
+                            
+    2              0.000005 function! TabbyOpenBuffer(minwid, clicks, btn, modifiers) abort
+                                " Run the following code only on a single left mouse button click without modifiers pressed
+                                if a:clicks == 1 && a:btn is# 'l' && a:modifiers !~# '[^ ]'
+                                    execute 'buffer' a:minwid
+                                endif
+                            endfunction
+                            
+    2              0.000002 function! TabbyTabline() abort
+                                return luaeval("require'tabby'.update()")
+                            endfunction
+                            
+    2              0.000002 function! TabbyRenderTabline() abort
+                                return luaeval("require'tabby.tabline'.render()")
+                            endfunction
+
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/which-key.nvim/plugin/which-key.lua
 Sourced 2 times
-Total time:   0.001155
- Self time:   0.001155
+Total time:   0.000715
+ Self time:   0.000715
 
 count  total (s)   self (s)
                             local timer = (vim.uv or vim.loop).new_timer()
@@ -227,45 +256,16 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/gitsigns.nvim/plugin/gitsigns.lua
 Sourced 2 times
-Total time:   0.035210
- Self time:   0.035210
+Total time:   0.024737
+ Self time:   0.024737
 
 count  total (s)   self (s)
                             require('gitsigns').setup()
 
-SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/tabby.nvim/plugin/tabby.vim
-Sourced 2 times
-Total time:   0.000118
- Self time:   0.000118
-
-count  total (s)   self (s)
-                            "" TODO
-    2              0.000020 function! TabbyCustomClickHandler(minwid, clicks, btn, modifiers) abort
-                                call luaeval(
-                                    \ "require'tabby.module.node'.handle_custom_click(_A[1], _A[2], _A[3], _A[4])",
-                                    \ [a:minwid, a:clicks, a:btn, a:modifiers]
-                                    \)
-                            endfunction
-                            
-    2              0.000007 function! TabbyOpenBuffer(minwid, clicks, btn, modifiers) abort
-                                " Run the following code only on a single left mouse button click without modifiers pressed
-                                if a:clicks == 1 && a:btn is# 'l' && a:modifiers !~# '[^ ]'
-                                    execute 'buffer' a:minwid
-                                endif
-                            endfunction
-                            
-    2              0.000003 function! TabbyTabline() abort
-                                return luaeval("require'tabby'.update()")
-                            endfunction
-                            
-    2              0.000003 function! TabbyRenderTabline() abort
-                                return luaeval("require'tabby.tabline'.render()")
-                            endfunction
-
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/syntax/syntax.vim
 Sourced 1 time
-Total time:   0.005930
- Self time:   0.000637
+Total time:   0.004321
+ Self time:   0.000445
 
 count  total (s)   self (s)
                             " Vim syntax support file
@@ -276,22 +276,22 @@ count  total (s)   self (s)
                             " This file is used for ":syntax on".
                             " It installs the autocommands and starts highlighting for all buffers.
                             
-    1              0.000014 if !has("syntax")
+    1              0.000010 if !has("syntax")
                               finish
     1              0.000001 endif
                             
                             " If Syntax highlighting appears to be on already, turn it off first, so that
                             " any leftovers are cleared.
-    1              0.000007 if exists("syntax_on") || exists("syntax_manual")
+    1              0.000005 if exists("syntax_on") || exists("syntax_manual")
                               so <sfile>:p:h/nosyntax.vim
     1              0.000001 endif
                             
                             " Load the Syntax autocommands and set the default methods for highlighting.
-    1   0.000677   0.000499 runtime syntax/synload.vim
+    1   0.000503   0.000363 runtime syntax/synload.vim
                             
                             " Load the FileType autocommands if not done yet.
-    1              0.000006 if exists("did_load_filetypes")
-    1              0.000003   let s:did_ft = 1
+    1              0.000004 if exists("did_load_filetypes")
+    1              0.000002   let s:did_ft = 1
                             else
                               filetype on
                               let s:did_ft = 0
@@ -301,23 +301,23 @@ count  total (s)   self (s)
                             " This makes the syntax automatically set when the file type is detected
                             " unless treesitter highlighting is enabled.
                             " Avoid an error when 'verbose' is set and <amatch> expansion fails.
-    1              0.000003 augroup syntaxset
-    1              0.000006   au! FileType *	if !exists('b:ts_highlight') | 0verbose exe "set syntax=" . expand("<amatch>") | endif
+    1              0.000002 augroup syntaxset
+    1              0.000005   au! FileType *	if !exists('b:ts_highlight') | 0verbose exe "set syntax=" . expand("<amatch>") | endif
     1              0.000001 augroup END
                             
                             " Execute the syntax autocommands for the each buffer.
                             " If the filetype wasn't detected yet, do that now.
                             " Always do the syntaxset autocommands, for buffers where the 'filetype'
                             " already was set manually (e.g., help buffers).
-    1   0.005129   0.000013 doautoall syntaxset FileType
-    1              0.000004 if !s:did_ft
+    1   0.003747   0.000010 doautoall syntaxset FileType
+    1              0.000003 if !s:did_ft
                               doautoall filetypedetect BufRead
-    1              0.000008 endif
+    1              0.000006 endif
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/syntax/synload.vim
 Sourced 1 time
-Total time:   0.000159
- Self time:   0.000159
+Total time:   0.000127
+ Self time:   0.000127
 
 count  total (s)   self (s)
                             " Vim syntax support file
@@ -330,23 +330,23 @@ count  total (s)   self (s)
                             " 1. Set the default highlight groups.
                             " 2. Install Syntax autocommands for all the available syntax files.
                             
-    1              0.000010 if !has("syntax")
+    1              0.000008 if !has("syntax")
                               finish
     1              0.000001 endif
                             
                             " let others know that syntax has been switched on
-    1              0.000006 let syntax_on = 1
+    1              0.000004 let syntax_on = 1
                             
                             " Line continuation is used here, remove 'C' from 'cpoptions'
     1              0.000004 let s:cpo_save = &cpo
-    1              0.000007 set cpo&vim
+    1              0.000006 set cpo&vim
                             
                             " First remove all old syntax autocommands.
     1              0.000003 au! Syntax
                             
-    1              0.000006 au Syntax *		call s:SynSet()
+    1              0.000005 au Syntax *		call s:SynSet()
                             
-    1              0.000006 fun! s:SynSet()
+    1              0.000004 fun! s:SynSet()
                               " clear syntax for :set syntax=OFF  and any syntax name that doesn't exist
                               syn clear
                               if exists("b:current_syntax")
@@ -380,7 +380,7 @@ count  total (s)   self (s)
                             
                             
                             " Handle adding doxygen to other languages (C, C++, C#, IDL, java, php, DataScript)
-    1              0.000019 au Syntax c,cpp,cs,idl,java,php,datascript
+    1              0.000015 au Syntax c,cpp,cs,idl,java,php,datascript
                             	\ if (exists('b:load_doxygen_syntax') && b:load_doxygen_syntax)
                             	\	|| (exists('g:load_doxygen_syntax') && g:load_doxygen_syntax)
                             	\   | runtime! syntax/doxygen.vim
@@ -388,7 +388,7 @@ count  total (s)   self (s)
                             
                             
                             " Source the user-specified syntax highlighting file
-    1              0.000005 if exists("mysyntaxfile")
+    1              0.000003 if exists("mysyntaxfile")
                               let s:fname = expand(mysyntaxfile)
                               if filereadable(s:fname)
                                 execute "source " . fnameescape(s:fname)
@@ -396,13 +396,13 @@ count  total (s)   self (s)
     1              0.000001 endif
                             
                             " Restore 'cpoptions'
-    1              0.000006 let &cpo = s:cpo_save
-    1              0.000008 unlet s:cpo_save
+    1              0.000005 let &cpo = s:cpo_save
+    1              0.000009 unlet s:cpo_save
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/gzip.vim
 Sourced 1 time
-Total time:   0.000045
- Self time:   0.000045
+Total time:   0.000050
+ Self time:   0.000050
 
 count  total (s)   self (s)
                             " Vim plugin for editing compressed files.
@@ -414,8 +414,8 @@ count  total (s)   self (s)
                             " - this plugin was already loaded
                             " - when 'compatible' is set
                             " - some autocommands are already taking care of compressed files
-    1              0.000019 if exists("loaded_gzip") || &cp || exists("#BufReadPre#*.gz")
-    1              0.000003   finish
+    1              0.000010 if exists("loaded_gzip") || &cp || exists("#BufReadPre#*.gz")
+    1              0.000002   finish
                             endif
                             let loaded_gzip = 1
                             
@@ -481,19 +481,19 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/matchit.vim
 Sourced 1 time
-Total time:   0.000060
- Self time:   0.000060
+Total time:   0.000024
+ Self time:   0.000024
 
 count  total (s)   self (s)
                             " Nvim: load the matchit plugin by default.
-    1              0.000014 if !exists("g:loaded_matchit") && stridx(&packpath, $VIMRUNTIME) >= 0
+    1              0.000009 if !exists("g:loaded_matchit") && stridx(&packpath, $VIMRUNTIME) >= 0
                               packadd matchit
-    1              0.000005 endif
+    1              0.000003 endif
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/matchparen.vim
 Sourced 1 time
-Total time:   0.000318
- Self time:   0.000318
+Total time:   0.000226
+ Self time:   0.000226
 
 count  total (s)   self (s)
                             " Vim plugin for showing matching parens
@@ -505,42 +505,42 @@ count  total (s)   self (s)
                             " - this plugin was already loaded (or disabled)
                             " - when 'compatible' is set
                             " - Vim has no support for :defer
-    1              0.000016 if exists("g:loaded_matchparen") || &cp ||
+    1              0.000011 if exists("g:loaded_matchparen") || &cp ||
                                   \ exists(":defer") != 2
                               finish
     1              0.000001 endif
-    1              0.000005 let g:loaded_matchparen = 1
+    1              0.000003 let g:loaded_matchparen = 1
                             
     1              0.000003 if !exists("g:matchparen_timeout")
-    1              0.000003   let g:matchparen_timeout = 300
+    1              0.000002   let g:matchparen_timeout = 300
     1              0.000001 endif
-    1              0.000003 if !exists("g:matchparen_insert_timeout")
+    1              0.000002 if !exists("g:matchparen_insert_timeout")
     1              0.000002   let g:matchparen_insert_timeout = 60
     1              0.000001 endif
-    1              0.000003 if !exists("g:matchparen_disable_cursor_hl")
-    1              0.000003   let g:matchparen_disable_cursor_hl = 0
+    1              0.000002 if !exists("g:matchparen_disable_cursor_hl")
+    1              0.000002   let g:matchparen_disable_cursor_hl = 0
     1              0.000001 endif
                             
-    1              0.000005 augroup matchparen
+    1              0.000003 augroup matchparen
                               " Replace all matchparen autocommands
-    1              0.000013   autocmd! CursorMoved,CursorMovedI,WinEnter,WinScrolled * call s:Highlight_Matching_Pair()
-    1              0.000004   autocmd! BufWinEnter * autocmd SafeState * ++once call s:Highlight_Matching_Pair()
-    1              0.000005   autocmd! WinLeave,BufLeave * call s:Remove_Matches()
-    1              0.000005   autocmd! TextChanged,TextChangedI * call s:Highlight_Matching_Pair()
-    1              0.000003   autocmd! TextChangedP * call s:Remove_Matches()
+    1              0.000010   autocmd! CursorMoved,CursorMovedI,WinEnter,WinScrolled * call s:Highlight_Matching_Pair()
+    1              0.000003   autocmd! BufWinEnter * autocmd SafeState * ++once call s:Highlight_Matching_Pair()
+    1              0.000003   autocmd! WinLeave,BufLeave * call s:Remove_Matches()
+    1              0.000003   autocmd! TextChanged,TextChangedI * call s:Highlight_Matching_Pair()
+    1              0.000002   autocmd! TextChangedP * call s:Remove_Matches()
     1              0.000001 augroup END
                             
                             " Skip the rest if it was already done.
-    1              0.000008 if exists("*s:Highlight_Matching_Pair")
+    1              0.000005 if exists("*s:Highlight_Matching_Pair")
                               finish
     1              0.000001 endif
                             
-    1              0.000004 let s:cpo_save = &cpo
-    1              0.000008 set cpo-=C
+    1              0.000002 let s:cpo_save = &cpo
+    1              0.000005 set cpo-=C
                             
                             " The function that is invoked (very often) to define a ":match" highlighting
                             " for any matching paren.
-    1              0.000004 func s:Highlight_Matching_Pair()
+    1              0.000002 func s:Highlight_Matching_Pair()
                               if !exists("w:matchparen_ids")
                                 let w:matchparen_ids = []
                               endif
@@ -708,10 +708,10 @@ count  total (s)   self (s)
                             endfunc
                             
                             " Define commands that will disable and enable the plugin.
-    1              0.000007 command DoMatchParen call s:DoMatchParen()
-    1              0.000004 command NoMatchParen call s:NoMatchParen()
+    1              0.000004 command DoMatchParen call s:DoMatchParen()
+    1              0.000003 command NoMatchParen call s:NoMatchParen()
                             
-    1              0.000002 func s:NoMatchParen()
+    1              0.000001 func s:NoMatchParen()
                               let w = winnr()
                               noau windo call s:Remove_Matches()
                               unlet! g:loaded_matchparen
@@ -719,25 +719,25 @@ count  total (s)   self (s)
                               au! matchparen
                             endfunc
                             
-    1              0.000002 func s:DoMatchParen()
+    1              0.000001 func s:DoMatchParen()
                               runtime plugin/matchparen.vim
                               let w = winnr()
                               silent windo doau CursorMoved
                               exe "noau ". w . "wincmd w"
                             endfunc
                             
-    1              0.000007 let &cpo = s:cpo_save
-    1              0.000006 unlet s:cpo_save
+    1              0.000005 let &cpo = s:cpo_save
+    1              0.000005 unlet s:cpo_save
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/netrwPlugin.vim
 Sourced 1 time
-Total time:   0.000036
- Self time:   0.000036
+Total time:   0.000022
+ Self time:   0.000022
 
 count  total (s)   self (s)
                             " Load the netrw package.
                             
-    1              0.000014 if &cp || exists("g:loaded_netrw") || exists("g:loaded_netrwPlugin")
+    1              0.000009 if &cp || exists("g:loaded_netrw") || exists("g:loaded_netrwPlugin")
     1              0.000002   finish
                             endif
                             
@@ -747,17 +747,17 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/rplugin.vim
 Sourced 1 time
-Total time:   0.000411
- Self time:   0.000141
+Total time:   0.000292
+ Self time:   0.000129
 
 count  total (s)   self (s)
-    1              0.000014 if exists('g:loaded_remote_plugins')
+    1              0.000010 if exists('g:loaded_remote_plugins')
                               finish
     1              0.000001 endif
-    1              0.000005 let g:loaded_remote_plugins = '/path/to/manifest'
+    1              0.000003 let g:loaded_remote_plugins = '/path/to/manifest'
                             
                             " Get the path to the rplugin manifest file.
-    1              0.000005 function! s:GetManifestPath() abort
+    1              0.000004 function! s:GetManifestPath() abort
                               let manifest_base = ''
                             
                               if exists('$NVIM_RPLUGIN_MANIFEST')
@@ -794,7 +794,7 @@ count  total (s)   self (s)
                               return [substitute(pseudostdpath, '[/\\]\=$', '/', '') . 'nvim/rplugin.vim', origpath]
                             endfunction
                             
-    1              0.000002 function! s:GetManifest() abort
+    1              0.000001 function! s:GetManifest() abort
                               let manifest = s:GetManifestPath()
                               if !filereadable(manifest)
                                 " Check if an old manifest file exists and move it to the new location.
@@ -808,40 +808,40 @@ count  total (s)   self (s)
                               return manifest
                             endfunction
                             
-    1              0.000002 function! s:LoadRemotePlugins() abort
+    1              0.000001 function! s:LoadRemotePlugins() abort
                               let g:loaded_remote_plugins = s:GetManifest()
                               if filereadable(g:loaded_remote_plugins)
                                 execute 'source' fnameescape(g:loaded_remote_plugins)
                               endif
                             endfunction
                             
-    1              0.000008 command! -bar UpdateRemotePlugins call remote#host#UpdateRemotePlugins()
+    1              0.000005 command! -bar UpdateRemotePlugins call remote#host#UpdateRemotePlugins()
                             
-    1              0.000007 if index(v:argv, "--clean") < 0
-    1   0.000285   0.000015   call s:LoadRemotePlugins()
-    1              0.000006 endif
+    1              0.000005 if index(v:argv, "--clean") < 0
+    1   0.000184   0.000021   call s:LoadRemotePlugins()
+    1              0.000004 endif
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/shada.vim
 Sourced 1 time
-Total time:   0.000124
- Self time:   0.000124
+Total time:   0.000091
+ Self time:   0.000091
 
 count  total (s)   self (s)
-    1              0.000011 if exists('g:loaded_shada_plugin')
+    1              0.000007 if exists('g:loaded_shada_plugin')
                               finish
     1              0.000001 endif
-    1              0.000004 let g:loaded_shada_plugin = 1
+    1              0.000003 let g:loaded_shada_plugin = 1
                             
-    1              0.000009 augroup ShaDaCommands
-    1              0.000014   autocmd!
-    1              0.000017   autocmd BufReadCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000006 augroup ShaDaCommands
+    1              0.000008   autocmd!
+    1              0.000012   autocmd BufReadCmd *.shada,*.shada.tmp.[a-z]
                                     \ :if !empty(v:cmdarg)|throw '++opt not supported'|endif
                                     \ |call setline('.', shada#get_strings(readfile(expand('<afile>'),'b')))
                                     \ |setlocal filetype=shada
-    1              0.000010   autocmd FileReadCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000007   autocmd FileReadCmd *.shada,*.shada.tmp.[a-z]
                                     \ :if !empty(v:cmdarg)|throw '++opt not supported'|endif
                                     \ |call append("'[", shada#get_strings(readfile(expand('<afile>'), 'b')))
-    1              0.000011   autocmd BufWriteCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000008   autocmd BufWriteCmd *.shada,*.shada.tmp.[a-z]
                                     \ :if !empty(v:cmdarg)|throw '++opt not supported'|endif
                                     \ |if writefile(shada#get_binstrings(getline(1, '$')),
                                                    \expand('<afile>'), 'b') == 0
@@ -849,33 +849,33 @@ count  total (s)   self (s)
                                                            \? 0
                                                            \: stridx(&cpoptions, '+') != -1)
                                     \ |endif
-    1              0.000010   autocmd FileWriteCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000007   autocmd FileWriteCmd *.shada,*.shada.tmp.[a-z]
                                     \ :if !empty(v:cmdarg)|throw '++opt not supported'|endif
                                     \ |call writefile(
                                           \shada#get_binstrings(getline(min([line("'["), line("']")]),
                                                                        \max([line("'["), line("']")]))),
                                           \expand('<afile>'),
                                           \'b')
-    1              0.000009   autocmd FileAppendCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000007   autocmd FileAppendCmd *.shada,*.shada.tmp.[a-z]
                                     \ :if !empty(v:cmdarg)|throw '++opt not supported'|endif
                                     \ |call writefile(
                                           \shada#get_binstrings(getline(min([line("'["), line("']")]),
                                                                        \max([line("'["), line("']")]))),
                                           \expand('<afile>'),
                                           \'ab')
-    1              0.000007   autocmd SourceCmd *.shada,*.shada.tmp.[a-z]
+    1              0.000010   autocmd SourceCmd *.shada,*.shada.tmp.[a-z]
                                     \ :execute 'rshada' fnameescape(expand('<afile>'))
-    1              0.000005 augroup END
+    1              0.000003 augroup END
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/spellfile.vim
 Sourced 1 time
-Total time:   0.000034
- Self time:   0.000034
+Total time:   0.000026
+ Self time:   0.000026
 
 count  total (s)   self (s)
                             " Vim plugin for downloading spell files
                             
-    1              0.000015 if exists("loaded_spellfile_plugin") || &cp || exists("#SpellFileMissing")
+    1              0.000010 if exists("loaded_spellfile_plugin") || &cp || exists("#SpellFileMissing")
     1              0.000002   finish
                             endif
                             let loaded_spellfile_plugin = 1
@@ -884,8 +884,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/tarPlugin.vim
 Sourced 1 time
-Total time:   0.000035
- Self time:   0.000035
+Total time:   0.000045
+ Self time:   0.000045
 
 count  total (s)   self (s)
                             " tarPlugin.vim -- a Vim plugin for browsing tarfiles
@@ -902,8 +902,8 @@ count  total (s)   self (s)
                             " This part only sets the autocommands.  The functions are in autoload/tar.vim.
                             " ---------------------------------------------------------------------
                             "  Load Once: {{{1
-    1              0.000011 if &cp || exists("g:loaded_tarPlugin")
-    1              0.000002  finish
+    1              0.000007 if &cp || exists("g:loaded_tarPlugin")
+    1              0.000001  finish
                             endif
                             let g:loaded_tarPlugin = "v32"
                             let s:keepcpo          = &cpo
@@ -950,8 +950,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/tutor.vim
 Sourced 1 time
-Total time:   0.000075
- Self time:   0.000075
+Total time:   0.000037
+ Self time:   0.000037
 
 count  total (s)   self (s)
                             " Tutor:	New Style Tutor Plugin :h vim-tutor-mode
@@ -960,17 +960,17 @@ count  total (s)   self (s)
                             " Original Author: Felipe Morales <hel.sheep@gmail.com>
                             " Date: 2025 May 12
                             
-    1              0.000011 if exists('g:loaded_tutor_mode_plugin') || &compatible
+    1              0.000008 if exists('g:loaded_tutor_mode_plugin') || &compatible
                                 finish
     1              0.000001 endif
-    1              0.000005 let g:loaded_tutor_mode_plugin = 1
+    1              0.000003 let g:loaded_tutor_mode_plugin = 1
                             
-    1              0.000014 command! -nargs=? -complete=custom,tutor#TutorCmdComplete Tutor call tutor#TutorCmd(<q-args>)
+    1              0.000009 command! -nargs=? -complete=custom,tutor#TutorCmdComplete Tutor call tutor#TutorCmd(<q-args>)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/zipPlugin.vim
 Sourced 1 time
-Total time:   0.000044
- Self time:   0.000044
+Total time:   0.000026
+ Self time:   0.000026
 
 count  total (s)   self (s)
                             " zipPlugin.vim: Handles browsing zipfiles
@@ -993,8 +993,8 @@ count  total (s)   self (s)
                             " Cleanse your hands, you sinners; and purify your hearts, you double-minded.
                             " ---------------------------------------------------------------------
                             " Load Once: {{{1
-    1              0.000012 if &cp || exists("g:loaded_zipPlugin")
-    1              0.000002  finish
+    1              0.000007 if &cp || exists("g:loaded_zipPlugin")
+    1              0.000001  finish
                             endif
                             let g:loaded_zipPlugin = "v33"
                             let s:keepcpo          = &cpo
@@ -1033,8 +1033,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/editorconfig.lua
 Sourced 1 time
-Total time:   0.000720
- Self time:   0.000720
+Total time:   0.000537
+ Self time:   0.000537
 
 count  total (s)   self (s)
                             local group = vim.api.nvim_create_augroup('nvim.editorconfig', {})
@@ -1053,8 +1053,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/man.lua
 Sourced 1 time
-Total time:   0.000787
- Self time:   0.000787
+Total time:   0.000570
+ Self time:   0.000570
 
 count  total (s)   self (s)
                             if vim.g.loaded_man ~= nil then
@@ -1099,8 +1099,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/osc52.lua
 Sourced 1 time
-Total time:   0.000792
- Self time:   0.000792
+Total time:   0.000576
+ Self time:   0.000576
 
 count  total (s)   self (s)
                             --- @class (private) TermFeatures
@@ -1178,8 +1178,8 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/tohtml.lua
 Sourced 1 time
-Total time:   0.000731
- Self time:   0.000731
+Total time:   0.000501
+ Self time:   0.000501
 
 count  total (s)   self (s)
                             if vim.g.loaded_2html_plugin ~= nil then
@@ -1197,8 +1197,8 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/neo-tree.nvim/plugin/neo-tree.lua
 Sourced 1 time
-Total time:   0.000470
- Self time:   0.000470
+Total time:   0.000884
+ Self time:   0.000884
 
 count  total (s)   self (s)
                             if vim.g.loaded_neo_tree == 1 or vim.g.loaded_neo_tree == true then
@@ -1275,8 +1275,8 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/undotree/plugin/undotree.vim
 Sourced 1 time
-Total time:   0.000197
- Self time:   0.000197
+Total time:   0.000269
+ Self time:   0.000269
 
 count  total (s)   self (s)
                             "=================================================
@@ -1286,7 +1286,7 @@ count  total (s)   self (s)
                             " License: BSD
                             
                             " Avoid installing twice.
-    1              0.000008 if exists('g:loaded_undotree')
+    1              0.000009 if exists('g:loaded_undotree')
                                 finish
     1              0.000001 endif
     1              0.000004 let g:loaded_undotree = 0
@@ -1298,10 +1298,10 @@ count  total (s)   self (s)
                                 command! -nargs=0 -bar UndotreeToggle :echoerr "undotree.vim needs Vim version >= 7.3"
                                 finish
     1              0.000001 endif
-    1              0.000002 if (v:version == 703 && !has("patch005"))
+    1              0.000003 if (v:version == 703 && !has("patch005"))
                                 command! -nargs=0 -bar UndotreeToggle :echoerr "undotree.vim needs vim7.3 with patch005 applied."
                                 finish
-    1              0.000000 endif
+    1              0.000001 endif
     1              0.000002 let g:loaded_undotree = 1   " Signal plugin availability with a value of 1.
                             
                             "=================================================
@@ -1356,137 +1356,137 @@ count  total (s)   self (s)
                             " |                            diff   |
                             " |                                   |
                             " +-----------------------------------+
-    1              0.000002 if !exists('g:undotree_WindowLayout')
-    1              0.000001     let g:undotree_WindowLayout = 1
+    1              0.000003 if !exists('g:undotree_WindowLayout')
+    1              0.000002     let g:undotree_WindowLayout = 1
     1              0.000001 endif
                             
                             " e.g. using 'd' instead of 'days' to save some space.
     1              0.000002 if !exists('g:undotree_ShortIndicators')
-    1              0.000001     let g:undotree_ShortIndicators = 0
-    1              0.000000 endif
+    1              0.000002     let g:undotree_ShortIndicators = 0
+    1              0.000001 endif
                             
                             " undotree window width
     1              0.000002 if !exists('g:undotree_SplitWidth')
-    1              0.000001     if g:undotree_ShortIndicators == 1
+    1              0.000002     if g:undotree_ShortIndicators == 1
                                     let g:undotree_SplitWidth = 24
     1              0.000001     else
-    1              0.000001         let g:undotree_SplitWidth = 30
+    1              0.000002         let g:undotree_SplitWidth = 30
     1              0.000001     endif
-    1              0.000000 endif
+    1              0.000001 endif
                             
                             " diff window height
     1              0.000002 if !exists('g:undotree_DiffpanelHeight')
-    1              0.000001     let g:undotree_DiffpanelHeight = 10
-    1              0.000000 endif
+    1              0.000002     let g:undotree_DiffpanelHeight = 10
+    1              0.000001 endif
                             
                             " auto open diff window
     1              0.000002 if !exists('g:undotree_DiffAutoOpen')
     1              0.000001     let g:undotree_DiffAutoOpen = 1
-    1              0.000000 endif
+    1              0.000001 endif
                             
                             " if set, let undotree window get focus after being opened, otherwise
                             " focus will stay in current window.
     1              0.000002 if !exists('g:undotree_SetFocusWhenToggle')
-    1              0.000001     let g:undotree_SetFocusWhenToggle = 0
-    1              0.000000 endif
+    1              0.000002     let g:undotree_SetFocusWhenToggle = 0
+    1              0.000001 endif
                             
                             " tree node shape.
     1              0.000002 if !exists('g:undotree_TreeNodeShape')
-    1              0.000001     let g:undotree_TreeNodeShape = '*'
-    1              0.000000 endif
+    1              0.000002     let g:undotree_TreeNodeShape = '*'
+    1              0.000001 endif
                             
                             " tree vertical shape.
     1              0.000002 if !exists('g:undotree_TreeVertShape')
-    1              0.000001     let g:undotree_TreeVertShape = '|'
-    1              0.000000 endif
+    1              0.000002     let g:undotree_TreeVertShape = '|'
+    1              0.000001 endif
                             
                             " tree split shape.
     1              0.000002 if !exists('g:undotree_TreeSplitShape')
-    1              0.000001     let g:undotree_TreeSplitShape = '/'
-    1              0.000000 endif
+    1              0.000002     let g:undotree_TreeSplitShape = '/'
+    1              0.000001 endif
                             
                             " tree return shape.
     1              0.000002 if !exists('g:undotree_TreeReturnShape')
-    1              0.000001     let g:undotree_TreeReturnShape = '\'
-    1              0.000000 endif
+    1              0.000002     let g:undotree_TreeReturnShape = '\'
+    1              0.000001 endif
                             
-    1              0.000001 if !exists('g:undotree_DiffCommand')
-    1              0.000001     let g:undotree_DiffCommand = "diff"
-    1              0.000000 endif
+    1              0.000002 if !exists('g:undotree_DiffCommand')
+    1              0.000002     let g:undotree_DiffCommand = "diff"
+    1              0.000001 endif
                             
                             " relative timestamp
-    1              0.000005 if !exists('g:undotree_RelativeTimestamp')
-    1              0.000001     let g:undotree_RelativeTimestamp = 1
-    1              0.000000 endif
+    1              0.000006 if !exists('g:undotree_RelativeTimestamp')
+    1              0.000002     let g:undotree_RelativeTimestamp = 1
+    1              0.000001 endif
                             
                             " Highlight changed text
     1              0.000002 if !exists('g:undotree_HighlightChangedText')
-    1              0.000001     let g:undotree_HighlightChangedText = 1
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HighlightChangedText = 1
+    1              0.000001 endif
                             
                             " Highlight changed text using signs in the gutter
     1              0.000002 if !exists('g:undotree_HighlightChangedWithSign')
-    1              0.000001     let g:undotree_HighlightChangedWithSign = 1
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HighlightChangedWithSign = 1
+    1              0.000001 endif
                             
                             " Highlight linked syntax type.
                             " You may chose your favorite through ":hi" command
     1              0.000002 if !exists('g:undotree_HighlightSyntaxAdd')
-    1              0.000001     let g:undotree_HighlightSyntaxAdd = "DiffAdd"
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HighlightSyntaxAdd = "DiffAdd"
+    1              0.000001 endif
     1              0.000002 if !exists('g:undotree_HighlightSyntaxChange')
-    1              0.000001     let g:undotree_HighlightSyntaxChange = "DiffChange"
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HighlightSyntaxChange = "DiffChange"
+    1              0.000001 endif
     1              0.000002 if !exists('g:undotree_HighlightSyntaxDel')
-    1              0.000001     let g:undotree_HighlightSyntaxDel = "DiffDelete"
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HighlightSyntaxDel = "DiffDelete"
+    1              0.000001 endif
                             
                             " Deprecates the old style configuration.
     1              0.000002 if exists('g:undotree_SplitLocation')
                                 echo "g:undotree_SplitLocation is deprecated,
                                             \ please use g:undotree_WindowLayout instead."
-    1              0.000000 endif
+    1              0.000001 endif
                             
                             " Show help line
     1              0.000002 if !exists('g:undotree_HelpLine')
-    1              0.000001     let g:undotree_HelpLine = 1
-    1              0.000000 endif
+    1              0.000002     let g:undotree_HelpLine = 1
+    1              0.000001 endif
                             
                             " Show cursorline
-    1              0.000001 if !exists('g:undotree_CursorLine')
+    1              0.000002 if !exists('g:undotree_CursorLine')
     1              0.000001     let g:undotree_CursorLine = 1
-    1              0.000000 endif
+    1              0.000001 endif
                             
                             " Define the default persistence undo directory if not defined in vim/nvim
                             " startup script.
-    1              0.000001 if !exists('g:undotree_UndoDir')
-    1              0.000002     let s:undoDir = &undodir
-    1              0.000004     let s:subdir = has('nvim') ? 'nvim' : 'vim'
-    1              0.000001     if s:undoDir == "."
+    1              0.000002 if !exists('g:undotree_UndoDir')
+    1              0.000003     let s:undoDir = &undodir
+    1              0.000005     let s:subdir = has('nvim') ? 'nvim' : 'vim'
+    1              0.000002     if s:undoDir == "."
                                     let s:undoDir = $HOME . '/.local/state/' . s:subdir . '/undo/'
     1              0.000001     endif
-    1              0.000001     let g:undotree_UndoDir = s:undoDir
-    1              0.000000 endif
+    1              0.000002     let g:undotree_UndoDir = s:undoDir
+    1              0.000001 endif
                             
-    1              0.000002 augroup undotreeDetectPersistenceUndo
-    1              0.000010     au!
-    1              0.000004     au BufReadPost * call undotree#UndotreePersistUndo(0)
+    1              0.000003 augroup undotreeDetectPersistenceUndo
+    1              0.000012     au!
+    1              0.000005     au BufReadPost * call undotree#UndotreePersistUndo(0)
     1              0.000001 augroup END
                             
                             "=================================================
                             " User commands.
-    1              0.000006 command! -nargs=0 -bar UndotreeToggle      :call undotree#UndotreeToggle()
-    1              0.000003 command! -nargs=0 -bar UndotreeHide        :call undotree#UndotreeHide()
-    1              0.000004 command! -nargs=0 -bar UndotreeShow        :call undotree#UndotreeShow()
-    1              0.000002 command! -nargs=0 -bar UndotreeFocus       :call undotree#UndotreeFocus()
-    1              0.000003 command! -nargs=0 -bar UndotreePersistUndo :call undotree#UndotreePersistUndo(1)
+    1              0.000007 command! -nargs=0 -bar UndotreeToggle      :call undotree#UndotreeToggle()
+    1              0.000004 command! -nargs=0 -bar UndotreeHide        :call undotree#UndotreeHide()
+    1              0.000017 command! -nargs=0 -bar UndotreeShow        :call undotree#UndotreeShow()
+    1              0.000004 command! -nargs=0 -bar UndotreeFocus       :call undotree#UndotreeFocus()
+    1              0.000004 command! -nargs=0 -bar UndotreePersistUndo :call undotree#UndotreePersistUndo(1)
                             
                             " vim: set et fdm=marker sts=4 sw=4:
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/diffview.nvim/plugin/diffview.lua
 Sourced 1 time
-Total time:   0.011916
- Self time:   0.011916
+Total time:   0.011849
+ Self time:   0.011849
 
 count  total (s)   self (s)
                             if vim.g.diffview_nvim_loaded or not require("diffview.bootstrap") then
@@ -1549,8 +1549,8 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/no-neck-pain.nvim/plugin/no-neck-pain.lua
 Sourced 1 time
-Total time:   0.000368
- Self time:   0.000368
+Total time:   0.000559
+ Self time:   0.000559
 
 count  total (s)   self (s)
                             if _G.NoNeckPainLoaded then
@@ -1597,8 +1597,8 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/detour.nvim/plugin/detour.lua
 Sourced 1 time
-Total time:   0.004553
- Self time:   0.004553
+Total time:   0.006823
+ Self time:   0.006823
 
 count  total (s)   self (s)
                             local detour = require('detour')
@@ -1607,14 +1607,14 @@ count  total (s)   self (s)
 
 SCRIPT  /Users/techdeus/.local/share/nvim-test/site/pack/deps/opt/vim-tmux-navigator/plugin/tmux_navigator.vim
 Sourced 1 time
-Total time:   0.000128
- Self time:   0.000128
+Total time:   0.000151
+ Self time:   0.000151
 
 count  total (s)   self (s)
                             " Maps <C-h/j/k/l> to switch vim splits in the given direction. If there are no more windows in that direction, forwards the operation to tmux.
                             " Additionally, <C-\> toggles between last active vim splits/tmux panes.
                             
-    1              0.000012 if exists("g:loaded_tmux_navigator") || &cp || v:version < 700
+    1              0.000014 if exists("g:loaded_tmux_navigator") || &cp || v:version < 700
                               finish
     1              0.000001 endif
     1              0.000004 let g:loaded_tmux_navigator = 1
@@ -1627,14 +1627,14 @@ count  total (s)   self (s)
                               endtry
                             endfunction
                             
-    1              0.000004 if !get(g:, 'tmux_navigator_no_mappings', 0)
-    1              0.000010   nnoremap <silent> <c-h> :<C-U>TmuxNavigateLeft<cr>
+    1              0.000005 if !get(g:, 'tmux_navigator_no_mappings', 0)
+    1              0.000013   nnoremap <silent> <c-h> :<C-U>TmuxNavigateLeft<cr>
     1              0.000004   nnoremap <silent> <c-j> :<C-U>TmuxNavigateDown<cr>
-    1              0.000003   nnoremap <silent> <c-k> :<C-U>TmuxNavigateUp<cr>
-    1              0.000003   nnoremap <silent> <c-l> :<C-U>TmuxNavigateRight<cr>
-    1              0.000003   nnoremap <silent> <c-\> :<C-U>TmuxNavigatePrevious<cr>
+    1              0.000004   nnoremap <silent> <c-k> :<C-U>TmuxNavigateUp<cr>
+    1              0.000004   nnoremap <silent> <c-l> :<C-U>TmuxNavigateRight<cr>
+    1              0.000004   nnoremap <silent> <c-\> :<C-U>TmuxNavigatePrevious<cr>
                             
-    1              0.000004   if !empty($TMUX)
+    1              0.000005   if !empty($TMUX)
                                 function! IsFZF()
                                   return &ft == 'fzf'
                                 endfunction
@@ -1644,21 +1644,21 @@ count  total (s)   self (s)
                                 tnoremap <expr> <silent> <C-l> IsFZF() ? "\<C-l>" : "\<C-w>:\<C-U> TmuxNavigateRight\<cr>"
     1              0.000001   endif
                             
-    1              0.000002   if !get(g:, 'tmux_navigator_disable_netrw_workaround', 0)
+    1              0.000003   if !get(g:, 'tmux_navigator_disable_netrw_workaround', 0)
     1              0.000002     if !exists('g:Netrw_UserMaps')
-    1              0.000003       let g:Netrw_UserMaps = [['<C-l>', '<C-U>TmuxNavigateRight<cr>']]
+    1              0.000004       let g:Netrw_UserMaps = [['<C-l>', '<C-U>TmuxNavigateRight<cr>']]
                                 else
                                   echohl ErrorMsg | echo 'vim-tmux-navigator conflicts with netrw <C-l> mapping. See https://github.com/christoomey/vim-tmux-navigator#netrw or add `let g:tmux_navigator_disable_netrw_workaround = 1` to suppress this warning.' | echohl None
     1              0.000001     endif
     1              0.000001   endif
-    1              0.000000 endif
+    1              0.000001 endif
                             
     1              0.000002 if empty($TMUX)
-    1              0.000004   command! TmuxNavigateLeft call s:VimNavigate('h')
-    1              0.000002   command! TmuxNavigateDown call s:VimNavigate('j')
-    1              0.000002   command! TmuxNavigateUp call s:VimNavigate('k')
-    1              0.000002   command! TmuxNavigateRight call s:VimNavigate('l')
-    1              0.000002   command! TmuxNavigatePrevious call s:VimNavigate('p')
+    1              0.000006   command! TmuxNavigateLeft call s:VimNavigate('h')
+    1              0.000003   command! TmuxNavigateDown call s:VimNavigate('j')
+    1              0.000003   command! TmuxNavigateUp call s:VimNavigate('k')
+    1              0.000003   command! TmuxNavigateRight call s:VimNavigate('l')
+    1              0.000003   command! TmuxNavigatePrevious call s:VimNavigate('p')
     1              0.000001   finish
                             endif
                             
@@ -1772,32 +1772,32 @@ count  total (s)   self (s)
 
 SCRIPT  /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim
 Sourced 1 time
-Total time:   0.000344
- Self time:   0.000267
+Total time:   0.000393
+ Self time:   0.000305
 
 count  total (s)   self (s)
                             " The clipboard provider uses shell commands to communicate with the clipboard.
                             " The provider function will only be registered if a supported command is
                             " available.
                             
-    1              0.000008 if exists('g:loaded_clipboard_provider')
+    1              0.000010 if exists('g:loaded_clipboard_provider')
                               finish
     1              0.000001 endif
                             " Default to 0.  provider#clipboard#Executable() may set 2.
                             " To force a reload:
                             "   :unlet g:loaded_clipboard_provider
                             "   :runtime autoload/provider/clipboard.vim
-    1              0.000025 let g:loaded_clipboard_provider = 0
+    1              0.000004 let g:loaded_clipboard_provider = 0
                             
-    1              0.000002 let s:copy = {}
+    1              0.000003 let s:copy = {}
     1              0.000001 let s:paste = {}
-    1              0.000001 let s:clipboard = {}
+    1              0.000009 let s:clipboard = {}
                             
                             " When caching is enabled, store the jobid of the xclip/xsel process keeping
                             " ownership of the selection, so we know how long the cache is valid.
-    1              0.000009 let s:selection = { 'owner': 0, 'data': [], 'stderr_buffered': v:true }
+    1              0.000006 let s:selection = { 'owner': 0, 'data': [], 'stderr_buffered': v:true }
                             
-    1              0.000003 function! s:selection.on_exit(jobid, data, event) abort
+    1              0.000004 function! s:selection.on_exit(jobid, data, event) abort
                               " At this point this nvim instance might already have launched
                               " a new provider instance. Don't drop ownership in this case.
                               if self.owner == a:jobid
@@ -1811,9 +1811,9 @@ count  total (s)   self (s)
                               endif
                             endfunction
                             
-    1              0.000019 let s:selections = { '*': s:selection, '+': copy(s:selection) }
+    1              0.000006 let s:selections = { '*': s:selection, '+': copy(s:selection) }
                             
-    1              0.000001 function! s:try_cmd(cmd, ...) abort
+    1              0.000002 function! s:try_cmd(cmd, ...) abort
                               let out = systemlist(a:cmd, (a:0 ? a:1 : ['']), 1)
                               if v:shell_error
                                 if !exists('s:did_error_try_cmd')
@@ -1828,7 +1828,7 @@ count  total (s)   self (s)
                             endfunction
                             
                             " Returns TRUE if `cmd` exits with success, else FALSE.
-    1              0.000001 function! s:cmd_ok(cmd) abort
+    1              0.000002 function! s:cmd_ok(cmd) abort
                               call system(a:cmd)
                               return v:shell_error == 0
                             endfunction
@@ -1902,7 +1902,7 @@ count  total (s)   self (s)
                               return 'doitclient'
                             endfunction
                             
-    1              0.000004 function! s:set_win32yank() abort
+    1              0.000006 function! s:set_win32yank() abort
                               if has('wsl') && getftype(exepath('win32yank.exe')) == 'link'
                                 let win32yank = resolve(exepath('win32yank.exe'))
                               else
@@ -1952,7 +1952,7 @@ count  total (s)   self (s)
                               return 'tmux'
                             endfunction
                             
-    1              0.000001 let s:cache_enabled = 1
+    1              0.000002 let s:cache_enabled = 1
     1              0.000001 let s:err = ''
                             
     1              0.000001 function! provider#clipboard#Error() abort
@@ -2045,7 +2045,7 @@ count  total (s)   self (s)
                               return ''
                             endfunction
                             
-    1              0.000001 function! s:clipboard.get(reg) abort
+    1              0.000002 function! s:clipboard.get(reg) abort
                               if type(s:paste[a:reg]) == v:t_func
                                 return s:paste[a:reg]()
                               elseif s:selections[a:reg].owner > 0
@@ -2063,7 +2063,7 @@ count  total (s)   self (s)
                               return clipboard_data
                             endfunction
                             
-    1              0.000001 function! s:clipboard.set(lines, regtype, reg) abort
+    1              0.000002 function! s:clipboard.set(lines, regtype, reg) abort
                               if a:reg == '"'
                                 call s:clipboard.set(a:lines,a:regtype,'+')
                                 if s:copy['*'] != s:copy['+']
@@ -2122,7 +2122,7 @@ count  total (s)   self (s)
                               return ret
                             endfunction
                             
-    1              0.000001 function! provider#clipboard#Call(method, args) abort
+    1              0.000002 function! provider#clipboard#Call(method, args) abort
                               if get(s:, 'here', v:false)  " Clipboard provider must not recurse. #7184
                                 return 0
                               endif
@@ -2135,67 +2135,146 @@ count  total (s)   self (s)
                             endfunction
                             
                             " eval_has_provider() decides based on this variable.
-    1   0.000087   0.000010 let g:loaded_clipboard_provider = empty(provider#clipboard#Executable()) ? 0 : 2
+    1   0.000102   0.000014 let g:loaded_clipboard_provider = empty(provider#clipboard#Executable()) ? 0 : 2
 
 FUNCTION  <SNR>16_Remove_Matches()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/matchparen.vim:203
-Called 1344 times
-Total time:   0.023545
- Self time:   0.023545
+Called 347 times
+Total time:   0.003755
+ Self time:   0.003755
 
 count  total (s)   self (s)
- 1344              0.005391   if exists('w:paren_hl_on') && w:paren_hl_on
+  347              0.000844   if exists('w:paren_hl_on') && w:paren_hl_on
                                 while !empty(w:matchparen_ids)
                                   silent! call remove(w:matchparen_ids, 0)->matchdelete()
                                 endwhile
                                 let w:paren_hl_on = 0
- 1344              0.000918   endif
+  347              0.000146   endif
 
 FUNCTION  <SNR>1_LoadFTPlugin()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/ftplugin.vim:15
-Called 7 times
-Total time:   0.021765
- Self time:   0.021765
+Called 4 times
+Total time:   0.009049
+ Self time:   0.009049
 
 count  total (s)   self (s)
-    7              0.000062     if exists("b:undo_ftplugin")
+    4              0.000025     if exists("b:undo_ftplugin")
                                   exe b:undo_ftplugin
                                   unlet! b:undo_ftplugin b:did_ftplugin
-    7              0.000009     endif
+    4              0.000004     endif
                             
-    7              0.000050     let s = expand("<amatch>")
-    7              0.000018     if s != ""
-    7              0.000047       if &cpo =~# "S" && exists("b:did_ftplugin")
+    4              0.000022     let s = expand("<amatch>")
+    4              0.000008     if s != ""
+    4              0.000022       if &cpo =~# "S" && exists("b:did_ftplugin")
                             	" In compatible mode options are reset to the global values, need to
                             	" set the local values also when a plugin was already used.
                             	unlet b:did_ftplugin
-    7              0.000005       endif
+    4              0.000002       endif
                             
                                   " When there is a dot it is used to separate filetype names.  Thus for
                                   " "aaa.bbb" load "aaa" and then "bbb".
-   14              0.000070       for name in split(s, '\.')
+    8              0.000030       for name in split(s, '\.')
                                     " Load Lua ftplugins after Vim ftplugins _per directory_
                                     " TODO(clason): use nvim__get_runtime when supports globs and modeline
                                     " XXX: "[.]" in the first pattern makes it a wildcard on Windows
-    7              0.021295         exe $'runtime! ftplugin/{name}[.]{{vim,lua}} ftplugin/{name}_*.{{vim,lua}} ftplugin/{name}/*.{{vim,lua}}'
-   14              0.000041       endfor
-    7              0.000009     endif
+    4              0.008851         exe $'runtime! ftplugin/{name}[.]{{vim,lua}} ftplugin/{name}_*.{{vim,lua}} ftplugin/{name}/*.{{vim,lua}}'
+    8              0.000016       endfor
+    4              0.000004     endif
+
+FUNCTION  provider#clipboard#Call()
+    Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim:347
+Called 2 times
+Total time:   0.049726
+ Self time:   0.000067
+
+count  total (s)   self (s)
+    2              0.000019   if get(s:, 'here', v:false)  " Clipboard provider must not recurse. #7184
+                                return 0
+    2              0.000002   endif
+    2              0.000006   let s:here = v:true
+    2              0.000002   try
+    2   0.049681   0.000022     return call(s:clipboard[a:method],a:args,s:clipboard)
+    2              0.000002   finally
+    2              0.000004     let s:here = v:false
+    2              0.000002   endtry
+
+FUNCTION  3()
+    Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim:288
+Called 2 times
+Total time:   0.049659
+ Self time:   0.000095
+
+count  total (s)   self (s)
+    2              0.000004   if a:reg == '"'
+                                call s:clipboard.set(a:lines,a:regtype,'+')
+                                if s:copy['*'] != s:copy['+']
+                                  call s:clipboard.set(a:lines,a:regtype,'*')
+                                end
+                                return 0
+    2              0.000001   end
+                            
+    2              0.000006   if type(s:copy[a:reg]) == v:t_func
+                                call s:copy[a:reg](a:lines, a:regtype)
+                                return 0
+    2              0.000001   end
+                            
+    2              0.000002   if s:cache_enabled == 0
+    2   0.049585   0.000021     call s:try_cmd(s:copy[a:reg], a:lines)
+                                "Cache it anyway we can compare it later to get regtype of the yank
+    2              0.000024     let s:selections[a:reg] = copy(s:selection)
+    2              0.000006     let s:selections[a:reg].data = [a:lines, a:regtype]
+    2              0.000002     return 0
+                              end
+                            
+                              if s:selections[a:reg].owner > 0
+                                let prev_job = s:selections[a:reg].owner
+                              end
+                              let s:selections[a:reg] = copy(s:selection)
+                              let selection = s:selections[a:reg]
+                              let selection.data = [a:lines, a:regtype]
+                              let selection.argv = s:copy[a:reg]
+                              let selection.detach = s:cache_enabled
+                              let selection.cwd = "/"
+                              let jobid = jobstart(selection.argv, selection)
+                              if jobid > 0
+                                call jobsend(jobid, a:lines)
+                                call jobclose(jobid, 'stdin')
+                                " xclip does not close stdout when receiving input via stdin
+                                if selection.argv[0] ==# 'xclip'
+                                  call jobclose(jobid, 'stdout')
+                                endif
+                                let selection.owner = jobid
+                                let ret = 1
+                              else
+                                echohl WarningMsg
+                                echomsg 'clipboard: failed to execute: '.(s:copy[a:reg])
+                                echohl None
+                                let ret = 1
+                              endif
+                            
+                              " The previous provider instance should exit when the new one takes
+                              " ownership, but kill it to be sure we don't fill up the job table.
+                              if exists('prev_job')
+                                call timer_start(1000, {... -> jobwait([prev_job], 0)[0] == -1 && jobstop(prev_job)})
+                              endif
+                            
+                              return ret
 
 FUNCTION  <SNR>13_SynSet()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/syntax/synload.vim:27
-Called 8 times
-Total time:   0.017877
- Self time:   0.017877
+Called 5 times
+Total time:   0.007875
+ Self time:   0.007875
 
 count  total (s)   self (s)
                               " clear syntax for :set syntax=OFF  and any syntax name that doesn't exist
-    8              0.000037   syn clear
-    8              0.000028   if exists("b:current_syntax")
+    5              0.000019   syn clear
+    5              0.000014   if exists("b:current_syntax")
                                 unlet b:current_syntax
-    8              0.000007   endif
+    5              0.000003   endif
                             
-    8              0.000039   0verbose let s = expand("<amatch>")
-    8              0.000018   if s == "ON"
+    5              0.000019   0verbose let s = expand("<amatch>")
+    5              0.000009   if s == "ON"
                                 " :set syntax=ON
                                 if &filetype == ""
                                   echohl ErrorMsg
@@ -2203,102 +2282,102 @@ count  total (s)   self (s)
                                   echohl None
                                 endif
                                 let s = &filetype
-    8              0.000014   elseif s == "OFF"
+    5              0.000007   elseif s == "OFF"
                                 let s = ""
-    8              0.000005   endif
+    5              0.000003   endif
                             
-    8              0.000011   if s != ""
+    5              0.000006   if s != ""
                                 " Load the syntax file(s).  When there are several, separated by dots,
                                 " load each in sequence.  Skip empty entries.
-   14              0.000065     for name in split(s, '\.')
-    7              0.000017       if !empty(name)
+    8              0.000031     for name in split(s, '\.')
+    4              0.000008       if !empty(name)
                                     " XXX: "[.]" in the first pattern makes it a wildcard on Windows
-    7              0.017358         exe $'runtime! syntax/{name}[.]{{vim,lua}} syntax/{name}/*.{{vim,lua}}'
-    7              0.000024       endif
-   14              0.000019     endfor
-    8              0.000008   endif
+    4              0.007626         exe $'runtime! syntax/{name}[.]{{vim,lua}} syntax/{name}/*.{{vim,lua}}'
+    4              0.000009       endif
+    8              0.000009     endfor
+    5              0.000004   endif
 
 FUNCTION  <SNR>18_GetManifest()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/rplugin.vim:44
 Called 1 time
-Total time:   0.000216
- Self time:   0.000095
+Total time:   0.000141
+ Self time:   0.000061
 
 count  total (s)   self (s)
-    1   0.000081   0.000013   let manifest = s:GetManifestPath()
-    1              0.000026   if !filereadable(manifest)
+    1   0.000055   0.000010   let manifest = s:GetManifestPath()
+    1              0.000017   if !filereadable(manifest)
                                 " Check if an old manifest file exists and move it to the new location.
-    2   0.000078   0.000025     for old_manifest in s:GetOldManifestPaths()
-    1              0.000011       if filereadable(old_manifest)
+    2   0.000047   0.000012     for old_manifest in s:GetOldManifestPaths()
+    1              0.000008       if filereadable(old_manifest)
                                     call rename(old_manifest, manifest)
                                     break
     1              0.000001       endif
-    2              0.000003     endfor
+    2              0.000002     endfor
     1              0.000001   endif
-    1              0.000002   return manifest
+    1              0.000001   return manifest
 
 FUNCTION  <SNR>34_set_pbcopy()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim:70
 Called 1 time
-Total time:   0.000030
- Self time:   0.000030
+Total time:   0.000014
+ Self time:   0.000014
 
 count  total (s)   self (s)
-    1              0.000002   let s:copy['+'] = ['pbcopy']
-    1              0.000001   let s:paste['+'] = ['pbpaste']
-    1              0.000002   let s:copy['*'] = s:copy['+']
-    1              0.000001   let s:paste['*'] = s:paste['+']
+    1              0.000003   let s:copy['+'] = ['pbcopy']
+    1              0.000002   let s:paste['+'] = ['pbpaste']
+    1              0.000003   let s:copy['*'] = s:copy['+']
+    1              0.000002   let s:paste['*'] = s:paste['+']
     1              0.000001   let s:cache_enabled = 0
     1              0.000001   return 'pbcopy'
 
 FUNCTION  <SNR>18_GetManifestPath()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/rplugin.vim:7
 Called 1 time
-Total time:   0.000068
- Self time:   0.000068
+Total time:   0.000045
+ Self time:   0.000045
 
 count  total (s)   self (s)
-    1              0.000003   let manifest_base = ''
+    1              0.000002   let manifest_base = ''
                             
-    1              0.000008   if exists('$NVIM_RPLUGIN_MANIFEST')
+    1              0.000005   if exists('$NVIM_RPLUGIN_MANIFEST')
                                 return fnamemodify($NVIM_RPLUGIN_MANIFEST, ':p')
     1              0.000001   endif
                             
-    1              0.000008   let dest = stdpath('data')
-    1              0.000003   if !empty(dest)
-    1              0.000021     if !isdirectory(dest)
+    1              0.000005   let dest = stdpath('data')
+    1              0.000002   if !empty(dest)
+    1              0.000013     if !isdirectory(dest)
                                   if getftype(dest) != "link"
                                     call mkdir(dest, 'p', 0700)
                                   endif
     1              0.000001     endif
-    1              0.000003     let manifest_base = dest
+    1              0.000002     let manifest_base = dest
     1              0.000001   endif
                             
-    1              0.000004   return manifest_base.'/rplugin.vim'
+    1              0.000002   return manifest_base.'/rplugin.vim'
 
 FUNCTION  <SNR>18_LoadRemotePlugins()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/rplugin.vim:58
 Called 1 time
-Total time:   0.000270
- Self time:   0.000054
+Total time:   0.000163
+ Self time:   0.000022
 
 count  total (s)   self (s)
-    1   0.000255   0.000038   let g:loaded_remote_plugins = s:GetManifest()
-    1              0.000010   if filereadable(g:loaded_remote_plugins)
+    1   0.000152   0.000011   let g:loaded_remote_plugins = s:GetManifest()
+    1              0.000007   if filereadable(g:loaded_remote_plugins)
                                 execute 'source' fnameescape(g:loaded_remote_plugins)
     1              0.000001   endif
 
 FUNCTION  <SNR>18_GetOldManifestPaths()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/rplugin.vim:28
 Called 1 time
-Total time:   0.000053
- Self time:   0.000053
+Total time:   0.000035
+ Self time:   0.000035
 
 count  total (s)   self (s)
-    1              0.000013   let prefix = exists('$MYVIMRC') ? $MYVIMRC : matchstr(get(split(execute('scriptnames'), '\n'), 0, ''), '\f\+$')
-    1              0.000030   let origpath = fnamemodify(expand(prefix, 1), ':h').'/.'.fnamemodify(prefix, ':t').'-rplugin~'
-    1              0.000006   if !has('win32')
-    1              0.000003     return [origpath]
+    1              0.000008   let prefix = exists('$MYVIMRC') ? $MYVIMRC : matchstr(get(split(execute('scriptnames'), '\n'), 0, ''), '\f\+$')
+    1              0.000020   let origpath = fnamemodify(expand(prefix, 1), ':h').'/.'.fnamemodify(prefix, ':t').'-rplugin~'
+    1              0.000004   if !has('win32')
+    1              0.000002     return [origpath]
                               endif
                               " Windows used to use $APPLOCALDATA/nvim but stdpath('data') is
                               " $XDG_DATA_DIR/nvim-data
@@ -2309,12 +2388,12 @@ count  total (s)   self (s)
 FUNCTION  provider#clipboard#Executable()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim:184
 Called 1 time
-Total time:   0.000077
- Self time:   0.000047
+Total time:   0.000088
+ Self time:   0.000074
 
 count  total (s)   self (s)
                               " Setting g:clipboard to v:false explicitly opts-in to using the "builtin" clipboard providers below
-    1              0.000003   if exists('g:clipboard') && g:clipboard isnot# v:false
+    1              0.000004   if exists('g:clipboard') && g:clipboard isnot# v:false
                                 if v:t_string ==# type(g:clipboard)
                                   " Handle string form of g:clipboard for all builtin providers
                                   if 'osc52' == g:clipboard
@@ -2362,8 +2441,8 @@ count  total (s)   self (s)
                             
                                 let s:cache_enabled = get(g:clipboard, 'cache_enabled', 0)
                                 return get(g:clipboard, 'name', 'g:clipboard')
-    1              0.000002   elseif has('mac')
-    1   0.000034   0.000004     return s:set_pbcopy()
+    1              0.000003   elseif has('mac')
+    1   0.000021   0.000007     return s:set_pbcopy()
                               elseif !empty($WAYLAND_DISPLAY) && executable('wl-copy') && executable('wl-paste')
                                 return s:set_wayland()
                               elseif !empty($WAYLAND_DISPLAY) && executable('waycopy') && executable('waypaste')
@@ -2397,77 +2476,96 @@ count  total (s)   self (s)
 
 FUNCTION  <SNR>2_LoadIndent()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/indent.vim:14
-Called 7 times
-Total time:   0.006389
- Self time:   0.006389
+Called 4 times
+Total time:   0.002693
+ Self time:   0.002693
 
 count  total (s)   self (s)
-    7              0.000041     if exists("b:undo_indent")
+    4              0.000017     if exists("b:undo_indent")
                                   exe b:undo_indent
                                   unlet! b:undo_indent b:did_indent
-    7              0.000005     endif
-    7              0.000042     let s = expand("<amatch>")
-    7              0.000016     if s != ""
-    7              0.000017       if exists("b:did_indent")
+    4              0.000002     endif
+    4              0.000017     let s = expand("<amatch>")
+    4              0.000007     if s != ""
+    4              0.000007       if exists("b:did_indent")
                             	unlet b:did_indent
-    7              0.000005       endif
+    4              0.000002       endif
                             
                                   " When there is a dot it is used to separate filetype names.  Thus for
                                   " "aaa.bbb" load "indent/aaa.vim" and then "indent/bbb.vim".
-   14              0.000064       for name in split(s, '\.')
+    8              0.000027       for name in split(s, '\.')
                                     " XXX: "[.]" in the pattern makes it a wildcard on Windows
-    7              0.006057         exe $'runtime! indent/{name}[.]{{vim,lua}}'
-   14              0.000033       endfor
-    7              0.000007     endif
+    4              0.002552         exe $'runtime! indent/{name}[.]{{vim,lua}}'
+    8              0.000013       endfor
+    4              0.000004     endif
+
+FUNCTION  <SNR>34_try_cmd()
+    Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/autoload/provider/clipboard.vim:38
+Called 2 times
+Total time:   0.049564
+ Self time:   0.001238
+
+count  total (s)   self (s)
+    2   0.049518   0.001192   let out = systemlist(a:cmd, (a:0 ? a:1 : ['']), 1)
+    2              0.000011   if v:shell_error
+                                if !exists('s:did_error_try_cmd')
+                                  echohl WarningMsg
+                                  echomsg "clipboard: error: ".(len(out) ? out[0] : v:shell_error)
+                                  echohl None
+                                  let s:did_error_try_cmd = 1
+                                endif
+                                return 0
+    2              0.000001   endif
+    2              0.000003   return out
 
 FUNCTION  TabbyRenderTabline()
     Defined: ~/.local/share/nvim-test/site/pack/deps/opt/tabby.nvim/plugin/tabby.vim:20
-Called 149 times
-Total time:   0.132264
- Self time:   0.132264
+Called 54 times
+Total time:   0.038304
+ Self time:   0.038304
 
 count  total (s)   self (s)
-  149              0.132009     return luaeval("require'tabby.tabline'.render()")
+   54              0.038214     return luaeval("require'tabby.tabline'.render()")
 
 FUNCTION  <SNR>16_Highlight_Matching_Pair()
     Defined: /usr/local/Cellar/neovim/0.11.2/share/nvim/runtime/plugin/matchparen.vim:45
-Called 1324 times
-Total time:   0.139220
- Self time:   0.116099
+Called 343 times
+Total time:   0.022721
+ Self time:   0.019030
 
 count  total (s)   self (s)
- 1324              0.009704   if !exists("w:matchparen_ids")
-    5              0.000016     let w:matchparen_ids = []
- 1324              0.001531   endif
+  343              0.001505   if !exists("w:matchparen_ids")
+    2              0.000005     let w:matchparen_ids = []
+  343              0.000247   endif
                               " Remove any previous match.
- 1324   0.035692   0.012571   call s:Remove_Matches()
+  343   0.006018   0.002327   call s:Remove_Matches()
                             
                               " Avoid that we remove the popup menu.
                               " Return when there are no colors (looks like the cursor jumps).
- 1324              0.007217   if pumvisible() || (&t_Co < 8 && !has("gui_running"))
+  343              0.001164   if pumvisible() || (&t_Co < 8 && !has("gui_running"))
                                 return
- 1324              0.000803   endif
+  343              0.000125   endif
                             
                               " Get the character under the cursor and check if it's in 'matchpairs'.
- 1324              0.004764   let c_lnum = line('.')
- 1324              0.003380   let c_col = col('.')
- 1324              0.001975   let before = 0
+  343              0.000757   let c_lnum = line('.')
+  343              0.000533   let c_col = col('.')
+  343              0.000305   let before = 0
                             
- 1324              0.004930   let text = getline(c_lnum)
- 1324              0.008576   let c_before = text->strpart(0, c_col - 1)->slice(-1)
- 1324              0.006593   let c = text->strpart(c_col - 1)->slice(0, 1)
- 1324              0.013883   let plist = split(&matchpairs, '.\zs[:,]')
- 1324              0.005225   let i = index(plist, c)
- 1324              0.001811   if i < 0
+  343              0.000761   let text = getline(c_lnum)
+  343              0.001415   let c_before = text->strpart(0, c_col - 1)->slice(-1)
+  343              0.001008   let c = text->strpart(c_col - 1)->slice(0, 1)
+  343              0.002276   let plist = split(&matchpairs, '.\zs[:,]')
+  343              0.000796   let i = index(plist, c)
+  343              0.000286   if i < 0
                                 " not found, in Insert mode try character before the cursor
- 1324              0.004399     if c_col > 1 && (mode() == 'i' || mode() == 'R')
+  343              0.000839     if c_col > 1 && (mode() == 'i' || mode() == 'R')
                                   let before = strlen(c_before)
                                   let c = c_before
                                   let i = index(plist, c)
- 1324              0.000960     endif
- 1324              0.001483     if i < 0
+  343              0.000171     endif
+  343              0.000240     if i < 0
                                   " not found, nothing to do
- 1324              0.001538       return
+  343              0.000243       return
                                 endif
                               endif
                             
@@ -2588,31 +2686,37 @@ count  total (s)   self (s)
 
 FUNCTIONS SORTED ON TOTAL TIME
 count  total (s)   self (s)  function
- 1324   0.139220   0.116099  <SNR>16_Highlight_Matching_Pair()
-  149   0.132264             TabbyRenderTabline()
- 1344   0.023545             <SNR>16_Remove_Matches()
-    7   0.021765             <SNR>1_LoadFTPlugin()
-    8   0.017877             <SNR>13_SynSet()
-    7   0.006389             <SNR>2_LoadIndent()
-    1   0.000270   0.000054  <SNR>18_LoadRemotePlugins()
-    1   0.000216   0.000095  <SNR>18_GetManifest()
-    1   0.000077   0.000047  provider#clipboard#Executable()
-    1   0.000068             <SNR>18_GetManifestPath()
-    1   0.000053             <SNR>18_GetOldManifestPaths()
-    1   0.000030             <SNR>34_set_pbcopy()
+    2   0.049726   0.000067  provider#clipboard#Call()
+    2   0.049659   0.000095  3()
+    2   0.049564   0.001238  <SNR>34_try_cmd()
+   54   0.038304             TabbyRenderTabline()
+  343   0.022721   0.019030  <SNR>16_Highlight_Matching_Pair()
+    4   0.009049             <SNR>1_LoadFTPlugin()
+    5   0.007875             <SNR>13_SynSet()
+  347   0.003755             <SNR>16_Remove_Matches()
+    4   0.002693             <SNR>2_LoadIndent()
+    1   0.000163   0.000022  <SNR>18_LoadRemotePlugins()
+    1   0.000141   0.000061  <SNR>18_GetManifest()
+    1   0.000088   0.000074  provider#clipboard#Executable()
+    1   0.000045             <SNR>18_GetManifestPath()
+    1   0.000035             <SNR>18_GetOldManifestPaths()
+    1   0.000014             <SNR>34_set_pbcopy()
 
 FUNCTIONS SORTED ON SELF TIME
 count  total (s)   self (s)  function
-  149              0.132264  TabbyRenderTabline()
- 1324   0.139220   0.116099  <SNR>16_Highlight_Matching_Pair()
- 1344              0.023545  <SNR>16_Remove_Matches()
-    7              0.021765  <SNR>1_LoadFTPlugin()
-    8              0.017877  <SNR>13_SynSet()
-    7              0.006389  <SNR>2_LoadIndent()
-    1   0.000216   0.000095  <SNR>18_GetManifest()
-    1              0.000068  <SNR>18_GetManifestPath()
-    1   0.000270   0.000054  <SNR>18_LoadRemotePlugins()
-    1              0.000053  <SNR>18_GetOldManifestPaths()
-    1   0.000077   0.000047  provider#clipboard#Executable()
-    1              0.000030  <SNR>34_set_pbcopy()
+   54              0.038304  TabbyRenderTabline()
+  343   0.022721   0.019030  <SNR>16_Highlight_Matching_Pair()
+    4              0.009049  <SNR>1_LoadFTPlugin()
+    5              0.007875  <SNR>13_SynSet()
+  347              0.003755  <SNR>16_Remove_Matches()
+    4              0.002693  <SNR>2_LoadIndent()
+    2   0.049564   0.001238  <SNR>34_try_cmd()
+    2   0.049659   0.000095  3()
+    1   0.000088   0.000074  provider#clipboard#Executable()
+    2   0.049726   0.000067  provider#clipboard#Call()
+    1   0.000141   0.000061  <SNR>18_GetManifest()
+    1              0.000045  <SNR>18_GetManifestPath()
+    1              0.000035  <SNR>18_GetOldManifestPaths()
+    1   0.000163   0.000022  <SNR>18_LoadRemotePlugins()
+    1              0.000014  <SNR>34_set_pbcopy()
 

@@ -754,27 +754,30 @@ function PlugmanDashboard:_show_plugin_details()
     end
 
     local plugin = line_info.plugin
+    if not plugin then
+        return
+    end
 
     -- Create plugin details popup
     local details = {
         'Plugin Details',
         string.rep('═', 50),
         '',
-        'Name: ' .. plugin.name,
-        'Source: ' .. plugin.source,
-        'Status: ' .. plugin:status(),
+        'Name: ' .. (plugin.name or 'unknown'),
+        'Source: ' .. (plugin.source or 'unknown'),
+        'Status: ' .. (plugin:status() or 'unknown'),
         'Lazy: ' .. (plugin.lazy and 'yes' or 'no'),
-        'Priority: ' .. plugin.priority,
+        'Priority: ' .. (plugin.priority or 'unknown'),
         'Enabled: ' .. (plugin.enabled and 'yes' or 'no'),
         'Load Time: ' .. (plugin.loaded and utils.format_time(plugin.load_time) or 'not loaded'),
         '',
-        'Dependencies: ' .. (next(plugin.depends) and table.concat(plugin.depends, ', ') or 'none'),
-        'Events: ' .. (next(plugin.events) and table.concat(plugin.events, ', ') or 'none'),
-        'Commands: ' .. (next(plugin.commands) and table.concat(plugin.commands, ', ') or 'none'),
-        'Filetypes: ' .. (next(plugin.filetypes) and table.concat(plugin.filetypes, ', ') or 'none'),
+        'Dependencies: ' .. (plugin.depends and next(plugin.depends) and table.concat(plugin.depends, ', ') or 'none'),
+        'Events: ' .. (plugin.event and next(plugin.event) and table.concat(plugin.event, ', ') or 'none'),
+        'Commands: ' .. (plugin.cmd and next(plugin.cmd) and table.concat(plugin.cmd, ', ') or 'none'),
+        'Filetypes: ' .. (plugin.ft and next(plugin.ft) and table.concat(plugin.ft, ', ') or 'none'),
         '',
         'Configuration:',
-        vim.inspect(plugin.opts, { indent = '  ' }),
+        vim.inspect(plugin.opts or {}, { indent = '  ' }),
     }
 
     -- Show in floating window
