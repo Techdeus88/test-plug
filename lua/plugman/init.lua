@@ -94,37 +94,30 @@ end
 ---Recursively scan directory for plugin specs
 ---@param dir string
 ---@param specs table
-function M._scan_directory(dir, specs)
-    local handle = vim.loop.fs_scandir(dir)
-    if not handle then return end
+function M._scan_directory(plugins_dir, specs)
+    for _, dir in ipairs(plugins_dir) do
+        local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
+        if vim.fn.isdirectory(full_path) == 1 then
+            local files = vim.fn.glob(full_path .. '/*.lua', false, true)
+            for _, file in ipairs(files) do
+                local filename = vim.fn.fnamemodify(file, ':t:r')
+                local module_name = dir .. '.' .. filename
 
-    while true do
-        local name, t_type = vim.loop.fs_scandir_next(handle)
-        if not name then break end
-
-        local full_path = dir .. '/' .. name
-        if t_type == 'directory' then
-            M._scan_directory(full_path, specs)
-        elseif t_type == 'file' and name:match('%.lua$') then
-            -- Get the module path relative to the plugins directory
-            local module_path = full_path:gsub('^' .. vim.fn.stdpath('config') .. '/lua/', ''):gsub('%.lua$', ''):gsub(
-                '/', '.')
-            local ok, spec = pcall(require, module_path)
-
-            if ok and spec then
-                if type(spec) == 'table' then
-                    if type(spec[1]) == "string" then
+                local ok, plugins_spec = pcall(require, module_name)
+                if ok then
+                    if type(plugins_spec[1]) == "string" then
+                        local spec = plugins_spec
                         table.insert(specs, spec)
                     else
-                        for _, s in ipairs(spec) do
-                            if type(s) == "table" and type(s[1]) == "string" then
-                                table.insert(specs, s)
+                        for _, spec in ipairs(plugins_spec) do
+                            if type(spec) == "table" and type(spec[1]) == "string" then
+                                table.insert(specs, spec)
                             end
                         end
                     end
+                else
+                    vim.notify("Failed to load plugin spec from: " .. module_name, vim.log.levels.ERROR)
                 end
-            else
-                logger:warn(string.format('Failed to load plugin spec from %s: %s', module_path, spec))
             end
         end
     end
