@@ -80,7 +80,7 @@ function PlugmanLoader:_load_plugin(plugin)
   -- Emit loading start event
   vim.api.nvim_exec_autocmds('User', {
     pattern = 'PlugmanPluginLoading',
-    data = { name = plugin.name, plugin = plugin }
+    data = { name = plugin.name }
   })
   local ok = plugin:load()
 
@@ -90,13 +90,13 @@ function PlugmanLoader:_load_plugin(plugin)
     -- Emit loaded event with timing info
     vim.api.nvim_exec_autocmds('User', {
       pattern = 'PlugmanPluginLoaded',
-      data = { name = plugin.name, plugin = plugin }
+      data = { name = plugin.name }
     })
   else
     -- Emit error event
     vim.api.nvim_exec_autocmds('User', {
       pattern = 'PlugmanPluginError',
-      data = { name = plugin.name, error = plugin.error, plugin = plugin }
+      data = { name = plugin.name, error = plugin.error }
     })
     vim.notify(string.format('Failed to load %s: %s', plugin.name, plugin.error),
       vim.log.levels.ERROR)
@@ -109,17 +109,17 @@ end
 ---@param plugin PlugmanPlugin
 function PlugmanLoader:_setup_lazy_loading(plugin)
   -- Event triggers
-  for _, event in ipairs(plugin.events) do
+  for _, event in ipairs(plugin.event) do
     self:_setup_event_trigger(plugin, event)
   end
 
   -- Command triggers
-  for _, cmd in ipairs(plugin.commands) do
+  for _, cmd in ipairs(plugin.cmd) do
     self:_setup_command_trigger(plugin, cmd)
   end
 
-  -- Filetype triggers
-  for _, ft in ipairs(plugin.filetypes) do
+  -- Filetype xtriggers
+  for _, ft in ipairs(plugin.ft) do
     self:_setup_filetype_trigger(plugin, ft)
   end
 
