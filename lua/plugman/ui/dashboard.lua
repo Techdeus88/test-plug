@@ -790,6 +790,108 @@ function PlugmanDashboard:_show_plugin_details()
     end, { buffer = popup_buf })
 end
 
+---View logs in a dedicated window
+function PlugmanDashboard:_view_logs()
+    local logger = require('plugman.logger')
+    local recent_logs = logger.get():get_recent(100) -- Get more logs for the dedicated view
+
+    -- Create log entries with proper formatting
+    local log_lines = {
+        '📋 Plugman Logs',
+        string.rep('═', 80),
+        '',
+    }
+
+    -- Add log entries
+    for _, log_entry in ipairs(recent_logs) do
+        local prefix = string.format('[%s] %s:', log_entry.timestamp, log_entry.level:upper())
+        local line = string.format('%s %s', prefix, log_entry.message)
+        if log_entry.source then
+            line = line .. string.format(' [%s]', log_entry.source)
+        end
+        table.insert(log_lines, line)
+    end
+
+    -- Create and configure buffer
+    local log_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(log_buf, 0, -1, false, log_lines)
+    vim.api.nvim_buf_set_option(log_buf, 'filetype', 'log')
+    vim.api.nvim_buf_set_option(log_buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(log_buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(log_buf, 'swapfile', false)
+
+    -- Calculate window dimensions
+    local width = math.min(100, vim.o.columns - 10)
+    local height = math.min(#log_lines + 2, vim.o.lines - 10)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- Create and configure window
+    local log_win = vim.api.nvim_open_win(log_buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = ' Plugman Logs ',
+        title_pos = 'center',
+    })
+
+    -- Set window options
+    vim.api.nvim_win_set_option(log_win, 'wrap', false)
+    vim.api.nvim_win_set_option(log_win, 'cursorline', true)
+    vim.api.nvim_win_set_option(log_win, 'number', true)
+    vim.api.nvim_win_set_option(log_win, 'relativenumber', false)
+
+    -- Add keymaps
+    local opts = { buffer = log_buf, nowait = true, silent = true }
+    vim.keymap.set('n', 'q', function() vim.api.nvim_win_close(log_win, true) end, opts)
+    vim.keymap.set('n', '<Esc>', function() vim.api.nvim_win_close(log_win, true) end, opts)
+    vim.keymap.set('n', 'r', function()
+        -- Refresh logs
+        local new_logs = logger.get():get_recent(100)
+        local new_lines = {
+            '📋 Plugman Logs',
+            string.rep('═', 80),
+            '',
+        }
+        for _, log_entry in ipairs(new_logs) do
+            local prefix = string.format('[%s] %s:', log_entry.timestamp, log_entry.level:upper())
+            local line = string.format('%s %s', prefix, log_entry.message)
+            if log_entry.source then
+                line = line .. string.format(' [%s]', log_entry.source)
+            end
+            table.insert(new_lines, line)
+        end
+        vim.api.nvim_buf_set_option(log_buf, 'modifiable', true)
+        vim.api.nvim_buf_set_lines(log_buf, 0, -1, false, new_lines)
+        vim.api.nvim_buf_set_option(log_buf, 'modifiable', false)
+    end, opts)
+
+    -- Add syntax highlighting
+    local ns = vim.api.nvim_create_namespace('plugman_logs')
+    for i, line in ipairs(log_lines) do
+        if i > 3 then -- Skip header lines
+            local level = line:match('%[(%w+)%]')
+            if level then
+                local hl_group = 'Normal'
+                if level == 'ERROR' then
+                    hl_group = 'DiagnosticError'
+                elseif level == 'WARN' then
+                    hl_group = 'DiagnosticWarn'
+                elseif level == 'INFO' then
+                    hl_group = 'DiagnosticInfo'
+                elseif level == 'DEBUG' then
+                    hl_group = 'Comment'
+                end
+                vim.api.nvim_buf_add_highlight(log_buf, ns, hl_group, i - 1, 0, -1)
+            end
+        end
+    end
+end
+
 ---Close dashboard
 function PlugmanDashboard:close()
     self:_stop_auto_refresh()
