@@ -1,6 +1,7 @@
 ---@class PlugmanLoader
 ---@field config PlugmanConfig
 ---@field events PlugmanEvents
+---@field load_order number starts at zero to n
 ---@field loaded_plugins table<string, PlugmanPlugin>
 ---@field lazy_handlers table<string, function>
 local PlugmanLoader = {}
@@ -79,17 +80,17 @@ function PlugmanLoader:_load_plugin(plugin)
   if not plugin:should_load() then
     return
   end
-  local next_count = self.load_count + 1
+  local next_count = self.load_order + 1
 
   -- Emit loading start event
   vim.api.nvim_exec_autocmds('User', {
     pattern = 'PlugmanPluginLoading',
     data = { name = plugin.name }
   })
-  local install_ok plugin:install()
+  local install_ok = plugin:install()
   -- local load_ok = plugin:load(next_count)
 
-  if install_ok and load_ok then
+  if install_ok then -- load_ok
     self.loaded_plugins[plugin.name] = plugin
 
     -- Emit loaded event with timing info
@@ -107,8 +108,8 @@ function PlugmanLoader:_load_plugin(plugin)
       vim.log.levels.ERROR)
   end
 
-  self.load_count = next_count
-  return load_ok
+  self.load_order = next_count
+  return install_ok
 end
 
 ---Setup lazy loading for a plugin
