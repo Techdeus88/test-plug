@@ -106,7 +106,7 @@ function M._scan_directory(dir, specs)
         if t_type == 'directory' then
             M._scan_directory(full_path, specs)
         elseif t_type == 'file' and name:match('%.lua$') then
-            local filename = vim.fn.fnamemodify(name, ':t:r')
+            local filename = vim.fn.fnamemodify(t_type, ':t:r')
             local module_name = dir .. '.' .. filename
             local ok, spec = pcall(require, module_name)
             if ok and spec then
