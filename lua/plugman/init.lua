@@ -7,7 +7,7 @@
 ---@field api PlugmanAPI
 local M = {}
 
-local Config = require('plugman.Config')
+local Config = require('plugman.config')
 local core = require('plugman.core')
 local logger = require('plugman.logger')
 local ui = require('plugman.ui')
@@ -72,7 +72,7 @@ end
 
 ---Load plugin specifications from Configured directory
 function M._load_plugin_specs()
-    local plugins_path = vim.fn.stdpath('Config') .. '/lua/' .. M.Config.plugins_dir
+    local plugins_path = vim.fn.stdpath('config') .. '/lua/' .. M.Config.plugins_dir
 
     if not vim.loop.fs_stat(plugins_path) then
         vim.notify('Plugman: plugins directory not found: ' .. plugins_path, vim.log.levels.WARN)
@@ -98,7 +98,7 @@ function M._scan_directory(chosen_dir, specs)
     local plugins_dir = { chosen_dir }
 
     for _, dir in ipairs(plugins_dir) do
-        local full_path = vim.fn.stdpath('Config') .. '/lua/' .. dir:gsub('%.', '/')
+        local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
         if vim.fn.isdirectory(full_path) == 1 then
             local files = vim.fn.glob(full_path .. '/*.lua', false, true)
             for _, file in ipairs(files) do
