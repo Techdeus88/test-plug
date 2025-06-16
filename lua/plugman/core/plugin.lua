@@ -1,5 +1,6 @@
 ---@class PlugmanPlugin
 ---@field name string
+---@field type string
 ---@field source string
 ---@field monitor string
 ---@field checkout string
@@ -50,6 +51,7 @@ function PlugmanPlugin:new(spec)
     -- Core properties
     plugin.opts = spec.opts or spec.config or {}
     plugin.lazy = spec.lazy
+    plugin.type = "plugin"
     plugin.priority = spec.priority or 50
     plugin.depends = spec.depends or spec.dependencies or {}
     plugin.enabled = spec.enabled ~= false

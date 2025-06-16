@@ -11,6 +11,7 @@ PlugmanLoader.__index = PlugmanLoader
 ---@return PlugmanLoader
 ---@param config PlugmanConfig
 function PlugmanLoader:new(config)
+  ---@class PlugmanLoader
   local loader = setmetatable({}, self)
   loader.config = config
   loader.loaded_plugins = {}
@@ -97,7 +98,7 @@ function PlugmanLoader:load_all(plugins)
   end
 
   -- Load immediate plugins
-  for _, plugin in ipairs(immediate_plugins) do
+  for _, plugin in ipairs(immediate_plugins)  do
     local success, err = self:_load_plugin(plugin)
     if not success then
       vim.notify(string.format('Failed to load immediate plugin %s: %s', plugin.name, err),
