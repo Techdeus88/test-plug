@@ -190,7 +190,7 @@ function PlugmanPlugin:load()
     self.added = true
 
     -- Setup plugin if opts provided
-    if self.config and type(self.config) == 'function' then
+    if self.config then
         -- Handle configuration
         local merged_opts = self:_merge_config()
         local setup_ok, setup_err = pcall(self._process_config, self, merged_opts)
@@ -201,7 +201,9 @@ function PlugmanPlugin:load()
     end
 
     -- Setup keymaps
-    self:_setup_keymaps()
+    if self.keys then
+        self:_setup_keymaps()
+    end
 
     -- Run post hook
     if self.post then
@@ -241,7 +243,7 @@ function PlugmanPlugin:_setup_keymaps()
                 vim.keymap.set(mode, keymap[1], keymap[2], opts)
             end
         else
-            logger.warn(string.format("Invalid keymap entry for %s", self.name))
+            vim.notify(string.format("Invalid keymap entry for %s", self.name))
         end
     end
 end
