@@ -391,7 +391,7 @@ end
 ---@return table, table
 function PlugmanDashboard:_render_logs(start_line)
     local logger = require('plugman.logger')
-    local recent_logs = logger:get_recent(10)
+    local recent_logs = logger.get():get_recent(10)
 
     local lines = {
         '📋 Recent Logs',

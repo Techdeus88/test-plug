@@ -438,8 +438,4 @@ function M.fatal(message, source, data)
     return M.get():fatal(message, source, data)
 end
 
-M.config = PlugmanLogger.config
-M.export = PlugmanLogger.export
-M.get_recent = PlugmanLogger.get_recent
-M.get_stats = PlugmanLogger.get_stats
 return M
