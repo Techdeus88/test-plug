@@ -106,22 +106,25 @@ function M._scan_directory(dir, specs)
         if t_type == 'directory' then
             M._scan_directory(full_path, specs)
         elseif t_type == 'file' and name:match('%.lua$') then
-            local filename = vim.fn.fnamemodify(t_type, ':t:r')
-            local module_name = dir .. '.' .. filename
-            local ok, spec = pcall(require, module_name)
+            -- Get the module path relative to the plugins directory
+            local module_path = full_path:gsub('^' .. vim.fn.stdpath('config') .. '/lua/', ''):gsub('%.lua$', ''):gsub(
+                '/', '.')
+            local ok, spec = pcall(require, module_path)
+
             if ok and spec then
                 if type(spec) == 'table' then
                     if type(spec[1]) == "string" then
-                        local s = spec
-                        table.insert(specs, s)
-                      else
+                        table.insert(specs, spec)
+                    else
                         for _, s in ipairs(spec) do
-                          if type(s) == "table" and type(s[1]) == "string" then
-                            table.insert(specs, s)
-                          end
+                            if type(s) == "table" and type(s[1]) == "string" then
+                                table.insert(specs, s)
+                            end
                         end
-                      end
+                    end
                 end
+            else
+                logger:warn(string.format('Failed to load plugin spec from %s: %s', module_path, spec))
             end
         end
     end
