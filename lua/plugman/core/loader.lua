@@ -87,7 +87,7 @@ function PlugmanLoader:_load_plugin(plugin)
     pattern = 'PlugmanPluginLoading',
     data = { name = plugin.name }
   })
-  local install_ok = plugin:install()
+  -- local install_adk = plugin:install()
   local load_ok = plugin:load(next_count)
 
   if load_ok then

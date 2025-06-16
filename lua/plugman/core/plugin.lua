@@ -197,12 +197,14 @@ function PlugmanPlugin:load(load_count)
     local start_time = vim.loop.hrtime()
 
     if not self.added then
+        vim.notify(string.format("Installing %s", self.name))
         if not self:install() then
             return false
         end
     end
-
+    
     if not self.loaded then
+        vim.notify(string.format("Loading %s", self.name))
         -- Run init hook
         if self.init then
             local ok, err = pcall(self.init)
