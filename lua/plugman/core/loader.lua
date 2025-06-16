@@ -4,6 +4,7 @@
 ---@field load_order number starts at zero to n
 ---@field loaded_plugins table<string, PlugmanPlugin>
 ---@field lazy_handlers table<string, function>
+---@field plugins table<string, PlugmanPlugin>
 local PlugmanLoader = {}
 PlugmanLoader.__index = PlugmanLoader
 
@@ -21,6 +22,7 @@ function PlugmanLoader:new(config, plugins)
   loader.load_order = 0
   loader.events = require('plugman.core.events').new(loader)
   loader.loading_plugins = {} -- Track plugins being loaded to prevent circular deps
+  loader.load_errors = {} -- Track loading errors
   return loader
 end
 
@@ -69,40 +71,61 @@ end
 ---@param plugins table<string, PlugmanPlugin>
 function PlugmanLoader:load_all(plugins)
   local start_time = vim.loop.hrtime()
+  self.load_errors = {} -- Reset errors
+
+  -- Validate plugins table
+  if not plugins or type(plugins) ~= 'table' then
+    vim.notify('Invalid plugins table provided to load_all', vim.log.levels.ERROR)
+    return
+  end
 
   -- Separate plugins by loading strategy
   local priority_plugins = {}
   local immediate_plugins = {}
   local lazy_plugins = {}
 
-  for _, plugin in pairs(plugins) do
-    if plugin.priority > 50 then
+  for name, plugin in pairs(plugins) do
+    if not plugin or type(plugin) ~= 'table' then
+      vim.notify(string.format('Invalid plugin entry for %s', name), vim.log.levels.ERROR)
+      goto continue
+    end
+
+    if not plugin.name then
+      vim.notify(string.format('Plugin missing name: %s', vim.inspect(plugin)), vim.log.levels.ERROR)
+      goto continue
+    end
+
+    if plugin.priority and plugin.priority > 50 then
       table.insert(priority_plugins, plugin)
     elseif not plugin.lazy then
       table.insert(immediate_plugins, plugin)
     else
       table.insert(lazy_plugins, plugin)
     end
+
+    ::continue::
   end
 
   -- Sort priority plugins by priority (higher first)
   table.sort(priority_plugins, function(a, b)
-    return a.priority > b.priority
+    return (a.priority or 0) > (b.priority or 0)
   end)
 
   -- Load priority plugins
   for _, plugin in ipairs(priority_plugins) do
     local success, err = self:_load_plugin(plugin)
     if not success then
+      self.load_errors[plugin.name] = err
       vim.notify(string.format('Failed to load priority plugin %s: %s', plugin.name, err),
         vim.log.levels.ERROR)
     end
   end
 
   -- Load immediate plugins
-  for _, plugin in ipairs(immediate_plugins)  do
+  for _, plugin in ipairs(immediate_plugins) do
     local success, err = self:_load_plugin(plugin)
     if not success then
+      self.load_errors[plugin.name] = err
       vim.notify(string.format('Failed to load immediate plugin %s: %s', plugin.name, err),
         vim.log.levels.ERROR)
     end
@@ -110,12 +133,27 @@ function PlugmanLoader:load_all(plugins)
 
   -- Setup lazy loading for lazy plugins
   for _, plugin in ipairs(lazy_plugins) do
-    self:_setup_lazy_loading(plugin)
+    local success, err = pcall(function()
+      self:_setup_lazy_loading(plugin)
+    end)
+    if not success then
+      self.load_errors[plugin.name] = err
+      vim.notify(string.format('Failed to setup lazy loading for %s: %s', plugin.name, err),
+        vim.log.levels.ERROR)
+    end
   end
 
   local total_time = (vim.loop.hrtime() - start_time) / 1e6
-  vim.notify(string.format('Plugman: Loaded %d plugins in %.2fms',
-    #priority_plugins + #immediate_plugins, total_time), vim.log.levels.INFO)
+  local loaded_count = #priority_plugins + #immediate_plugins
+  local error_count = #vim.tbl_keys(self.load_errors)
+
+  if error_count > 0 then
+    vim.notify(string.format('Plugman: Loaded %d plugins in %.2fms (%d errors)',
+      loaded_count, total_time, error_count), vim.log.levels.WARN)
+  else
+    vim.notify(string.format('Plugman: Loaded %d plugins in %.2fms',
+      loaded_count, total_time), vim.log.levels.INFO)
+  end
 end
 
 ---Load a single plugin
@@ -123,6 +161,14 @@ end
 ---@return boolean success
 ---@return string? error
 function PlugmanLoader:_load_plugin(plugin)
+  if not plugin then
+    return false, "Invalid plugin object"
+  end
+
+  if not plugin.name then
+    return false, "Plugin missing name"
+  end
+
   if not plugin:should_load() then
     return true
   end
@@ -130,7 +176,7 @@ function PlugmanLoader:_load_plugin(plugin)
   -- Resolve dependencies first
   local success, err = self:_resolve_dependencies(plugin)
   if not success then
-    return false, err
+    return false, string.format("Dependency resolution failed: %s", err)
   end
 
   local next_count = self.load_order + 1
@@ -150,14 +196,14 @@ function PlugmanLoader:_load_plugin(plugin)
   end
 
   -- Load the plugin
-  local load_ok = plugin:load(next_count)
+  local load_ok, load_err = plugin:load(next_count)
   if not load_ok then
     -- Emit error event
     vim.api.nvim_exec_autocmds('User', {
       pattern = 'PlugmanPluginError',
-      data = { name = plugin.name, error = plugin.error }
+      data = { name = plugin.name, error = load_err }
     })
-    return false, plugin.error
+    return false, load_err
   end
 
   self.loaded_plugins[plugin.name] = plugin

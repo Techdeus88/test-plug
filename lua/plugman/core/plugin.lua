@@ -126,37 +126,63 @@ end
 
 ---Install plugin
 ---@return boolean Success
+---@return string? error
 function PlugmanPlugin:install()
+    if not self then
+        return false, "Invalid plugin object"
+    end
+
+    if not self.name then
+        return false, "Plugin missing name"
+    end
+
+    if not self.source then
+        return false, "Plugin missing source"
+    end
+
     if self.added then
         return true
     end
 
-    local ok, _ = Add({
-        source = self.source,
-        depends = self.depends,
-        hooks = self.hooks,
-        checkout = self.checkout,
-        monitor = self.monitor,
-    })
+    local ok, err = pcall(function()
+        Add({
+            source = self.source,
+            depends = self.depends,
+            hooks = self.hooks,
+            checkout = self.checkout,
+            monitor = self.monitor,
+        })
+    end)
+
     if not ok then
-        self.error = 'MiniDeps failed: ' .. self.name
-        return false
+        return false, string.format("MiniDeps failed: %s", err)
     end
 
-    if ok then
-        self.installed = self:is_installed()
-        self.added = true
-        -- self.cache:set_plugin(self.name, self:to_cache())
-        return true
-    else
-        return false
-    end
+    self.installed = self:is_installed()
+    self.added = true
+    return true
 end
 
 ---Check if plugin should be loaded
 ---@return boolean
 function PlugmanPlugin:should_load()
-    return self.enabled and not self.loaded
+    if not self then
+        return false
+    end
+
+    if not self.name then
+        return false
+    end
+
+    if not self.enabled then
+        return false
+    end
+
+    if self.loaded then
+        return false
+    end
+
+    return true
 end
 
 -- Configuration Functions
@@ -174,12 +200,24 @@ end
 ---@return boolean success
 ---@return string? error
 function PlugmanPlugin:load(current_count)
+    if not self then
+        return false, "Invalid plugin object"
+    end
+
     if self.loaded then
         return true
     end
 
     if not self.enabled then
         return false, "Plugin is disabled"
+    end
+
+    if not self.name then
+        return false, "Plugin missing name"
+    end
+
+    if not self.source then
+        return false, "Plugin missing source"
     end
 
     local start_time = vim.loop.hrtime()
@@ -222,9 +260,17 @@ function PlugmanPlugin:load(current_count)
         end
     end
 
+    -- Mark as loaded
     self.loaded = true
     self.load_count = current_count
     self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
+
+    -- Emit success event
+    vim.api.nvim_exec_autocmds('User', {
+        pattern = 'PlugmanPluginLoaded',
+        data = { name = self.name, load_time = self.load_time }
+    })
+
     return true
 end
 
