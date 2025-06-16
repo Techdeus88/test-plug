@@ -228,7 +228,8 @@ end
 
 ---Setup plugin keymaps
 function PlugmanPlugin:_setup_keymaps()
-    for _, keymap in ipairs(self.keys) do
+    local keymaps = type(self.keys) == "function" and self.keys() or self.keys
+    for _, keymap in ipairs(keymaps) do
         if type(keymap) == "table" then
             local opts = {
                 buffer = keymap.buffer,
@@ -239,7 +240,8 @@ function PlugmanPlugin:_setup_keymaps()
                 nowait = keymap.nowait,
                 expr = keymap.expr,
             }
-            for _, mode in ipairs(keymap.mode or { "n" }) do
+            local map_mode = keymap.mode ~= nil and keymap.mode or { "n" }
+            for _, mode in ipairs(map_mode) do
                 vim.keymap.set(mode, keymap[1], keymap[2], opts)
             end
         else
