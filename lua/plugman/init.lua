@@ -159,6 +159,7 @@ end
 
 ---Setup user commands
 function M._setup_commands()
+    -- Main Plugman command
     vim.api.nvim_create_user_command('Plugman', function(opts)
         local args = vim.split(opts.args, '%s+')
         local cmd = args[1] or 'ui'
@@ -184,6 +185,45 @@ function M._setup_commands()
             return { 'ui', 'sync', 'clean', 'health', 'benchmark', 'profile' }
         end,
     })
+
+    -- Convenience commands
+    vim.api.nvim_create_user_command('PlugmanUI', function()
+        M.ui:open()
+    end, {})
+
+    vim.api.nvim_create_user_command('PlugmanSync', function()
+        M.api:sync()
+    end, {})
+
+    vim.api.nvim_create_user_command('PlugmanClean', function()
+        M.api:clean()
+    end, {})
+
+    -- Setup keymaps
+    local function setup_keymaps()
+        -- Toggle Plugman UI
+        vim.keymap.set('n', '<leader>pm', function()
+            M.ui:open()
+        end, { desc = 'Toggle Plugman UI' })
+
+        -- Quick access keymaps
+        vim.keymap.set('n', '<leader>ps', function()
+            M.api:sync()
+        end, { desc = 'Sync Plugins' })
+
+        vim.keymap.set('n', '<leader>pc', function()
+            M.api:clean()
+        end, { desc = 'Clean Plugins' })
+
+        vim.keymap.set('n', '<leader>ph', function()
+            health.report()
+        end, { desc = 'Plugin Health Check' })
+    end
+
+    -- Setup keymaps if not in a special mode
+    if vim.g.plugman_setup_keymaps ~= false then
+        setup_keymaps()
+    end
 end
 
 return M
