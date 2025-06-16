@@ -83,10 +83,33 @@ end
 ---@param source string
 ---@return string
 function PlugmanPlugin:_extract_name(source)
-    local name = source:match('([^/]+)$')
+    if not source or type(source) ~= 'string' then
+        error('Invalid plugin source: ' .. tostring(source))
+    end
+
+    -- Handle different source formats
+    local name = source
+    
+    -- Remove .git suffix if present
     if name:match('%.git$') then
         name = name:sub(1, -5)
     end
+    
+    -- Extract last part of path
+    local last_part = name:match('([^/]+)$')
+    if last_part then
+        name = last_part
+    end
+    
+    -- Remove any remaining .git suffix
+    if name:match('%.git$') then
+        name = name:sub(1, -5)
+    end
+    
+    if not name or name == '' then
+        error('Could not extract plugin name from source: ' .. source)
+    end
+    
     return name
 end
 
