@@ -33,6 +33,7 @@ M.state = {
 function M.setup(opts)
     M.config = vim.tbl_deep_extend('force', config, opts or {})
     -- Initialize logger
+    logger.setup(M.config)
     logger:set_level(M.config.log_level)
     logger:info('Plugman initialization started')
 
