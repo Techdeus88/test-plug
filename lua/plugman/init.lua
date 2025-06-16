@@ -92,11 +92,11 @@ function M._load_plugin_specs()
 end
 
 ---Recursively scan directory for plugin specs
----@param dir string
+---@param chosen_dir string
 ---@param specs table
-function M._scan_directory(plugins_dir, specs)
-    plugins_dir = type(plugins_dir) == 'string' and { plugins_dir } or plugins_dir
-    
+function M._scan_directory(chosen_dir, specs)
+    local plugins_dir = { chosen_dir }
+
     for _, dir in ipairs(plugins_dir) do
         local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
         if vim.fn.isdirectory(full_path) == 1 then

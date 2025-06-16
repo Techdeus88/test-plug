@@ -229,7 +229,7 @@ end
 ---Setup plugin keymaps
 function PlugmanPlugin:_setup_keymaps()
     for _, keymap in ipairs(self.keys) do
-        if type(keymap) == "table" and keymap[1] then
+        if type(keymap) == "table" then
             local opts = {
                 buffer = keymap.buffer,
                 desc = keymap.desc,
