@@ -80,7 +80,7 @@ function M._load_plugin_specs()
     end
 
     local specs = {}
-    M._scan_directory(plugins_path, specs)
+    M._scan_directory(M.config.plugins_dir, specs)
 
     -- Convert specs to PlugmanPlugin objects
     for _, spec in ipairs(specs) do
@@ -95,6 +95,8 @@ end
 ---@param dir string
 ---@param specs table
 function M._scan_directory(plugins_dir, specs)
+    plugins_dir = type(plugins_dir) == 'string' and { plugins_dir } or plugins_dir
+    
     for _, dir in ipairs(plugins_dir) do
         local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
         if vim.fn.isdirectory(full_path) == 1 then
