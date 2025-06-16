@@ -15,6 +15,7 @@
 ---@field keys table
 ---@field init function
 ---@field config function
+---@field require string|nil
 ---@field post function
 ---@field installed boolean
 ---@field added boolean
@@ -102,6 +103,36 @@ function PlugmanPlugin:should_load()
     return self.enabled and not self.loaded
 end
 
+-- Configuration Functions
+function PlugmanPlugin:_merge_config()
+    if not (self.config or self.opts) then return {} end
+
+    local default_opts = type(self.opts) == 'table' and self.opts or {}
+    local config_opts = type(self.config) == 'table' and self.config or {}
+
+    return vim.tbl_deep_extend('force', default_opts, config_opts)
+end
+
+function PlugmanPlugin:_process_config(merged_opts)
+    if not self then return end
+
+    if type(self.config) == 'function' then
+        return self.config(self, merged_opts)
+    elseif type(self.config) == 'boolean' then
+        return self.config
+    elseif type(self.config) == 'string' then
+        return vim.cmd(self.config)
+    elseif merged_opts then
+        local mod_name = self.require or self.name
+        local ok, mod = pcall(require, mod_name)
+        if ok and mod.setup then
+            return mod.setup(merged_opts)
+        else
+            vim.notify(string.format('Failed to require plugin: %s', mod_name))
+        end
+    end
+end
+
 ---Load the plugin
 function PlugmanPlugin:load()
     if self.loaded or not self.enabled then
@@ -135,19 +166,12 @@ function PlugmanPlugin:load()
     self.added = true
 
     -- Setup plugin if opts provided
-    if next(self.opts) and type(self.opts.setup) ~= 'function' then
-        local plugin_module = require(self.name)
-        if plugin_module and plugin_module.setup then
-            local setup_ok, setup_err = pcall(plugin_module.setup, self.opts)
-            if not setup_ok then
-                self.error = 'Setup failed: ' .. setup_err
-                return false
-            end
-        end
-    elseif type(self.opts.setup) == 'function' then
-        local setup_ok, setup_err = pcall(self.opts.setup)
+    if self.config and type(self.config) == 'function' then
+        -- Handle configuration
+        local merged_opts = self:_merge_config()
+        local setup_ok, setup_err = pcall(self._process_config, self, merged_opts)
         if not setup_ok then
-            self.error = 'Custom setup failed: ' .. setup_err
+            self.error = 'Setup failed: ' .. setup_err
             return false
         end
     end
