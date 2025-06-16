@@ -24,7 +24,7 @@ M.state = {
         load_time = 0,
         plugin_count = 0,
         loaded_count = 0,
-    }
+    },
 }
 
 ---Initialize Plugman

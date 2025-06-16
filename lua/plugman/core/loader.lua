@@ -14,6 +14,7 @@ function PlugmanLoader:new(config)
   loader.config = config
   loader.loaded_plugins = {}
   loader.lazy_handlers = {}
+  loader.load_order = 0
   loader.events = require('plugman.core.events').new(loader)
   return loader
 end
@@ -28,7 +29,7 @@ function PlugmanLoader:load_all(plugins)
   local immediate_plugins = {}
   local lazy_plugins = {}
 
-  for name, plugin in pairs(plugins) do
+  for _, plugin in pairs(plugins) do
     if plugin.priority > 50 then
       table.insert(priority_plugins, plugin)
     elseif not plugin.lazy then
@@ -78,15 +79,17 @@ function PlugmanLoader:_load_plugin(plugin)
   if not plugin:should_load() then
     return
   end
+  local next_count = self.load_count + 1
 
   -- Emit loading start event
   vim.api.nvim_exec_autocmds('User', {
     pattern = 'PlugmanPluginLoading',
     data = { name = plugin.name }
   })
-  local ok = plugin:load()
+  local install_ok plugin:install()
+  -- local load_ok = plugin:load(next_count)
 
-  if ok then
+  if install_ok and load_ok then
     self.loaded_plugins[plugin.name] = plugin
 
     -- Emit loaded event with timing info
@@ -104,7 +107,8 @@ function PlugmanLoader:_load_plugin(plugin)
       vim.log.levels.ERROR)
   end
 
-  return ok
+  self.load_count = next_count
+  return load_ok
 end
 
 ---Setup lazy loading for a plugin
@@ -172,7 +176,7 @@ end
 ---@param plugin PlugmanPlugin
 ---@param key table
 function PlugmanLoader:_setup_keymap_trigger(plugin, key)
-  local modes = type(key.mode) == 'table' and key.mode or {key.mode or 'n'}
+  local modes = type(key.mode) == 'table' and key.mode or { key.mode or 'n' }
   local lhs = key.lhs or key[1]
   local rhs = key.rhs or key[2]
 

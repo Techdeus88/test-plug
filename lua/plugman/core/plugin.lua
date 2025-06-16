@@ -21,6 +21,7 @@
 ---@field added boolean
 ---@field enabled boolean
 ---@field loaded boolean
+---@field load_count number
 ---@field load_time number
 ---@field error nil|string
 local PlugmanPlugin = {}
@@ -90,27 +91,27 @@ function PlugmanPlugin:_extract_name(source)
 
     -- Handle different source formats
     local name = source
-    
+
     -- Remove .git suffix if present
     if name:match('%.git$') then
         name = name:sub(1, -5)
     end
-    
+
     -- Extract last part of path
     local last_part = name:match('([^/]+)$')
     if last_part then
         name = last_part
     end
-    
+
     -- Remove any remaining .git suffix
     if name:match('%.git$') then
         name = name:sub(1, -5)
     end
-    
+
     if not name or name == '' then
         error('Could not extract plugin name from source: ' .. source)
     end
-    
+
     return name
 end
 
@@ -119,6 +120,36 @@ function PlugmanPlugin:_build_path()
     local start_or_opt = (self.name == "mini.deps" or self.name == "plugman.nvim") and "start" or "opt"
     local plugin_name_path = string.format("/%s", self.name)
     return base_path .. start_or_opt .. plugin_name_path
+end
+
+---Install plugin
+---@return boolean Success
+function PlugmanPlugin:install()
+    if self.added then
+        return true
+    end
+
+    local ok, err = MiniDeps.add({
+        source = self.source,
+        depends = self.depends,
+        hooks = self.hooks,
+        checkout = self.checkout,
+        monitor = self.monitor,
+    })
+    if not ok then
+        self.error = 'MiniDeps failed: ' .. err
+        return false
+    end
+
+
+    if ok then
+        self.installed = self:is_installed()
+        self.added = true
+        -- self.cache:set_plugin(self.name, self:to_cache())
+        return true
+    else
+        return false
+    end
 end
 
 ---Check if plugin should be loaded
@@ -158,65 +189,59 @@ function PlugmanPlugin:_process_config(merged_opts)
 end
 
 ---Load the plugin
-function PlugmanPlugin:load()
+---@param load_count number The next iter of load_count so a plugin can load and attach itself to the global order
+function PlugmanPlugin:load(load_count)
     if self.loaded or not self.enabled then
         return true
     end
 
     local start_time = vim.loop.hrtime()
 
-    -- Run init hook
-    if self.init then
-        local ok, err = pcall(self.init)
-        if not ok then
-            self.error = 'Init failed: ' .. err
+    if not self.added then
+        if not self:install() then
             return false
         end
     end
 
-    -- Add to MiniDeps
-    local mini_deps = require('mini.deps')
-    local ok, err = pcall(mini_deps.add, {
-        source = self.source,
-        depends = self.depends,
-    })
-
-    if not ok then
-        self.error = 'MiniDeps failed: ' .. err
-        return false
-    end
-
-    self.installed = self:is_installed()
-    self.added = true
-
-    -- Setup plugin if opts provided
-    if self.config then
-        -- Handle configuration
-        local merged_opts = self:_merge_config()
-        local setup_ok, setup_err = pcall(self._process_config, self, merged_opts)
-        if not setup_ok then
-            self.error = 'Setup failed: ' .. setup_err
-            return false
+    if not self.loaded then
+        -- Run init hook
+        if self.init then
+            local ok, err = pcall(self.init)
+            if not ok then
+                self.error = 'Init failed: ' .. err
+                return false
+            end
         end
-    end
 
-    -- Setup keymaps
-    if self.keys then
-        self:_setup_keymaps()
-    end
-
-    -- Run post hook
-    if self.post then
-        local ok, err = pcall(self.post)
-        if not ok then
-            self.error = 'Post hook failed: ' .. err
-            return false
+        -- Setup plugin if opts provided
+        if self.config then
+            -- Handle configuration
+            local merged_opts = self:_merge_config()
+            local setup_ok, setup_err = pcall(self._process_config, self, merged_opts)
+            if not setup_ok then
+                self.error = 'Setup failed: ' .. setup_err
+                return false
+            end
         end
+
+        -- Setup keymaps
+        if self.keys then
+            self:_setup_keymaps()
+        end
+
+        -- Run post hook
+        if self.post then
+            local ok, err = pcall(self.post)
+            if not ok then
+                self.error = 'Post hook failed: ' .. err
+                return false
+            end
+        end
+
+        self.loaded = true
+        self.load_order = load_count
+        self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
     end
-
-    self.loaded = true
-    self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
-
     return true
 end
 
