@@ -148,12 +148,44 @@ function M._setup_autocmds()
         end,
     })
 
-    -- Health check on VimEnter
+    -- Health check and auto-launch dashboard on VimEnter
     vim.api.nvim_create_autocmd('VimEnter', {
         group = group,
         callback = function()
             vim.defer_fn(function()
+                -- Run health check
                 health.check_all()
+                
+                -- Auto-launch dashboard if conditions are met
+                local should_auto_launch = false
+                
+                -- Condition 1: First time setup
+                if not M.cache:get('initialized') then
+                    should_auto_launch = true
+                    M.cache:set('initialized', true)
+                end
+                
+                -- Condition 2: Plugins need attention
+                local stats = M.api:stats()
+                if stats.errors > 0 or stats.disabled > 0 then
+                    should_auto_launch = true
+                end
+                
+                -- Condition 3: Recent plugin changes
+                local recent_changes = M.cache:get('recent_changes') or {}
+                if #recent_changes > 0 then
+                    should_auto_launch = true
+                end
+                
+                -- Condition 4: Configuration changed
+                if M.cache:get('config_changed') then
+                    should_auto_launch = true
+                    M.cache:set('config_changed', false)
+                end
+                
+                if should_auto_launch then
+                    M.ui:open()
+                end
             end, 100)
         end,
     })

@@ -76,7 +76,7 @@ function PlugmanAPI:disable(name)
   vim.notify('Disabled plugin: ' .. name, vim.log.levels.INFO)
 end
 
----Sync all plugins
+---Sync plugins
 function PlugmanAPI:sync()
   vim.notify('Syncing plugins...', vim.log.levels.INFO)
   
@@ -85,8 +85,10 @@ function PlugmanAPI:sync()
   
   for _, plugin in pairs(self.plugman.plugins) do
     if plugin.enabled then
-      mini_deps.update(plugin.source)
+      mini_deps.update()
       count = count + 1
+      -- Track plugin sync
+      self.plugman.cache:track_plugin_change(plugin.name, 'synced')
     end
   end
   
@@ -101,6 +103,9 @@ function PlugmanAPI:clean()
   local mini_deps = require('mini.deps')
   -- mini_deps.clean() -- If available
   
+  -- Track cleanup
+  self.plugman.cache:track_plugin_change('system', 'cleaned')
+  
   vim.notify('Cleaned unused plugins', vim.log.levels.INFO)
 end
 
@@ -113,6 +118,9 @@ function PlugmanAPI:set_profile(profile)
   end
   
   self.plugman.config.profile = profile
+  -- Track profile change
+  self.plugman.cache:mark_config_changed()
+  
   vim.notify('Switched to profile: ' .. profile, vim.log.levels.INFO)
   
   -- Reload plugins for new profile

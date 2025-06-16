@@ -1,0 +1,66 @@
+return { -- Start modules 3~
+  {      -- plenary: plenary.nvim
+    "nvim-lua/plenary.nvim",
+    lazy = false,
+    config = true,
+    priority = 1000, -- Increased priority to ensure it loads first
+  },
+  { -- NUI: base ui for neovim: input, search and popup
+    "MunifTanjim/nui.nvim",
+    lazy = false,
+    config = true,
+    priority = 900, -- High priority but after plenary
+    depends = { "nvim-lua/plenary.nvim" }, -- Explicitly declare dependency
+  },
+{ -- Which-key: manage keymaps and use a nice UI to display them
+    'folke/which-key.nvim',
+    lazy = true,
+    require = 'which-key',
+    opts = {
+      preset = 'helix',
+    },
+    config = function(_, opts)
+      local which_key_ok, which_key = pcall(require, 'which-key')
+      if not which_key_ok then
+        vim.notify('Which-key not found', vim.log.levels.ERROR)
+        return
+      end
+
+      which_key.setup(opts)
+      which_key.add({
+        { '<leader>a', group = 'AI' },
+        { '<leader>b', group = 'Buffer' },
+        { '<leader>c', group = 'Code' },
+        { '<leader>d', group = 'Debug' },
+        { '<leader>e', group = 'Edit' },
+        { '<leader>f', group = 'Fuzzy Find' },
+        { '<leader>g', group = 'Git/lsp' },
+        { '<leader>l', group = 'LSP' },
+        { '<leader>o', group = 'Open' },
+        { '<leader>q', group = 'Quickfix' },
+        { '<leader>s', group = 'Snacks/Search' },
+        { '<leader>t', group = 'Toggle' },
+        { '<leader>w', group = 'Window' },
+        { '<leader>y', group = 'Other' },
+      })
+    end,
+  },
+  {
+    "gennaro-tedesco/nvim-possession",
+    depends = {
+      "ibhagwan/fzf-lua",
+      "nvim-lua/plenary.nvim", -- Add plenary as dependency
+    },
+    config = true,
+    lazy = true, -- Changed to lazy loading
+    event = "PlugmanSuperLazy", -- Load after startup
+    keys = {
+      { "<leader>sl", function() require("nvim-possession").list() end, desc = "📌list sessions", },
+      { "<leader>sn", function() require("nvim-possession").new() end, desc = "📌create new session", },
+      { "<leader>su", function() require("nvim-possession").update() end, desc = "📌update current session", },
+      { "<leader>sd", function() require("nvim-possession").delete() end, desc = "📌delete selected session" },
+    },
+  }
+}
+
+--End-of-file--
