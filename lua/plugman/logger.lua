@@ -389,6 +389,7 @@ function M.setup(config)
     if not _instance then
         _instance = PlugmanLogger:new(config)
         _instance:_init()
+        _instance:set_level(config.log_level)
     end
     return _instance
 end
