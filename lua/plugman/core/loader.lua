@@ -9,11 +9,13 @@ PlugmanLoader.__index = PlugmanLoader
 
 ---Create new loader instance
 ---@return PlugmanLoader
+---@param plugins table<string, PlugmanPlugin>
 ---@param config PlugmanConfig
-function PlugmanLoader:new(config)
+function PlugmanLoader:new(config, plugins)
   ---@class PlugmanLoader
   local loader = setmetatable({}, self)
   loader.config = config
+  loader.plugins = plugins
   loader.loaded_plugins = {}
   loader.lazy_handlers = {}
   loader.load_order = 0
@@ -39,7 +41,7 @@ function PlugmanLoader:_resolve_dependencies(plugin)
   self.loading_plugins[plugin.name] = true
 
   for _, dep_name in ipairs(plugin.depends) do
-    local dep = self.config.plugins[dep_name]
+    local dep = self.plugins[dep_name]
     if not dep then
       return false, string.format("Dependency not found: %s for plugin: %s", dep_name, plugin.name)
     end

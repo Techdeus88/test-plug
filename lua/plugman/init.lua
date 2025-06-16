@@ -55,7 +55,7 @@ function M.setup(opts)
     -- Initialize core components
     M.cache = core.Cache:new(M.Config)
     M.events = core.Events.new(M.loader)
-    M.loader = core.Loader:new(M.Config)
+    M.loader = core.Loader:new(M.Config, M.plugins)
     M.ui = ui:new(M.Config)
     M.api = api:new(M)
 
