@@ -37,13 +37,14 @@ function PlugmanPlugin:new(spec)
     local plugin = setmetatable({}, self)
 
     -- Parse source
-    plugin.source = spec[1] or spec.source
+    local source = spec[1] or spec.source
+    plugin.source = source
     if not plugin.source then
         error('Plugin source is required')
     end
 
     -- Extract name from source
-    plugin.name = spec.name or plugin:_extract_name(plugin.source)
+    plugin.name = spec.name or plugin:_extract_name(source)
 
     -- Core properties
     plugin.opts = spec.opts or spec.config or {}
