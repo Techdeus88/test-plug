@@ -533,17 +533,27 @@ end
 ---Sort plugins based on current sort settings
 ---@param plugins table
 function PlugmanDashboard:_sort_plugins(plugins)
+    -- Define status priority for consistent sorting
+    local status_priority = {
+        loaded = 1,
+        not_loaded = 2,
+        disabled = 3,
+        error = 4
+    }
+
     table.sort(plugins, function(a, b)
         local result
 
         if self.sort_by == 'name' then
             result = a.name < b.name
         elseif self.sort_by == 'status' then
-            result = a:status() < b:status()
+            local status_a = status_priority[a:status()] or 5
+            local status_b = status_priority[b:status()] or 5
+            result = status_a < status_b
         elseif self.sort_by == 'load_time' then
-            result = a.load_time < b.load_time
+            result = (a.load_time or 0) < (b.load_time or 0)
         elseif self.sort_by == 'priority' then
-            result = a.priority < b.priority
+            result = (a.priority or 50) < (b.priority or 50)
         else
             result = a.name < b.name
         end
