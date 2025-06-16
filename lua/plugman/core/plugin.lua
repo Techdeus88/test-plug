@@ -189,7 +189,7 @@ end
 
 ---Load the plugin
 ---@param load_count number The next iter of load_count so a plugin can load and attach itself to the global order
-function PlugmanPlugin:load(load_count)
+function PlugmanPlugin:load(current_count)
     if self.loaded or not self.enabled then
         return true
     end
@@ -202,7 +202,7 @@ function PlugmanPlugin:load(load_count)
             return false
         end
     end
-    
+
     if not self.loaded then
         vim.notify(string.format("Loading %s", self.name))
         -- Run init hook
@@ -223,6 +223,7 @@ function PlugmanPlugin:load(load_count)
                 self.error = 'Setup failed: ' .. setup_err
                 return false
             end
+            vim.notify(string.format("Config loaded: ", setup_ok))
         end
 
         -- Setup keymaps
@@ -240,7 +241,7 @@ function PlugmanPlugin:load(load_count)
         end
 
         self.loaded = true
-        self.load_order = load_count
+        self.load_count = current_count
         self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
     end
     return true
