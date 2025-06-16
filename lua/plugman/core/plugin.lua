@@ -167,79 +167,158 @@ function PlugmanPlugin:_merge_config()
     return vim.tbl_deep_extend('force', default_opts, config_opts)
 end
 
-function PlugmanPlugin:_process_config(merged_opts)
-    if not self then return end
-
-    if type(self.config) == 'function' then
-        return self.config(self, merged_opts)
-    elseif type(self.config) == 'boolean' then
-        return self.config
-    elseif type(self.config) == 'string' then
-        return vim.cmd(self.config)
-    elseif self.config == nil and merged_opts then
-        local mod_name = self.require or self.name
-        local ok, mod = pcall(require, mod_name)
-        if ok and mod.setup then
-            return mod.setup(merged_opts)
-        else
-            vim.notify(string.format('Failed to require plugin: %s', mod_name))
-        end
-    end
-end
-
 ---Load the plugin
 ---@param current_count number The next iter of load_count so a plugin can load and attach itself to the global order
+---@return boolean success
+---@return string? error
 function PlugmanPlugin:load(current_count)
-    if self.loaded or not self.enabled then
+    if self.loaded then
         return true
+    end
+
+    if not self.enabled then
+        return false, "Plugin is disabled"
     end
 
     local start_time = vim.loop.hrtime()
 
-    if not self.added then
-        vim.notify(string.format("Installing %s", self.name))
-        if not self:install() then
-            return false
+    -- Run init hook
+    if self.init then
+        local ok, err = pcall(self.init)
+        if not ok then
+            return false, string.format("Init hook failed: %s", err)
         end
     end
 
-    if not self.loaded then
-        vim.notify(string.format("Loading %s", self.name))
-        -- Run init hook
-        if self.init then
-            local ok, err = pcall(self.init)
-            if not ok then
-                self.error = 'Init failed: ' .. err
-                return false
-            end
-        end
-
-        -- Setup plugin if opts provided
-        if self.config or self.opts then
-            -- Handle configuration
-            local merged_opts = self:_merge_config()
+    -- Setup plugin if opts provided
+    if self.config or self.opts then
+        -- Handle configuration
+        local merged_opts = self:_merge_config()
+        local ok, err = pcall(function()
             self:_process_config(merged_opts)
-            vim.notify(string.format("Config loaded: %s", self.name))
+        end)
+        if not ok then
+            return false, string.format("Config processing failed: %s", err)
         end
+    end
 
-        -- Setup keymaps
-        if self.keys then
+    -- Setup keymaps
+    if self.keys then
+        local ok, err = pcall(function()
             self:_setup_keymaps()
+        end)
+        if not ok then
+            return false, string.format("Keymap setup failed: %s", err)
         end
+    end
 
-        -- Run post hook
-        if self.post then
-            local ok, err = pcall(self.post)
-            if not ok then
-                self.error = 'Post hook failed: ' .. err
-                return false
+    -- Run post hook
+    if self.post then
+        local ok, err = pcall(self.post)
+        if not ok then
+            return false, string.format("Post hook failed: %s", err)
+        end
+    end
+
+    self.loaded = true
+    self.load_count = current_count
+    self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
+    return true
+end
+
+---Process plugin configuration
+---@param merged_opts table
+---@return boolean success
+---@return string? error
+function PlugmanPlugin:_process_config(merged_opts)
+    if not merged_opts then
+        return true
+    end
+
+    if type(self.config) == 'function' then
+        local ok, err = pcall(self.config, self, merged_opts)
+        if not ok then
+            return false, string.format("Config function failed: %s", err)
+        end
+        return true
+    elseif type(self.config) == 'boolean' then
+        return self.config
+    elseif type(self.config) == 'string' then
+        local ok, err = pcall(vim.cmd, self.config)
+        if not ok then
+            return false, string.format("Config command failed: %s", err)
+        end
+        return true
+    elseif self.config == nil and merged_opts then
+        local mod_name = self.require or self.name
+        local ok, mod = pcall(require, mod_name)
+        if not ok then
+            return false, string.format("Failed to require module: %s", mod_name)
+        end
+        if mod.setup then
+            local setup_ok, setup_err = pcall(mod.setup, merged_opts)
+            if not setup_ok then
+                return false, string.format("Module setup failed: %s", setup_err)
             end
         end
-
-        self.loaded = true
-        self.load_count = current_count
-        self.load_time = (vim.loop.hrtime() - start_time) / 1e6 -- Convert to milliseconds
+        return true
     end
+
+    return true
+end
+
+---Setup plugin keymaps
+---@return boolean success
+---@return string? error
+function PlugmanPlugin:_setup_keymaps()
+    if not self.keys then
+        return true
+    end
+
+    local keymaps = type(self.keys) == "function" and self.keys() or self.keys
+    if type(keymaps) ~= "table" then
+        return false, "Invalid keymaps format"
+    end
+
+    for _, keymap in ipairs(keymaps) do
+        if type(keymap) ~= "table" then
+            return false, string.format("Invalid keymap entry for %s", self.name)
+        end
+
+        local opts = {
+            buffer = keymap.buffer,
+            desc = keymap.desc,
+            silent = keymap.silent ~= false,
+            remap = keymap.remap,
+            noremap = keymap.noremap ~= false,
+            nowait = keymap.nowait,
+            expr = keymap.expr,
+        }
+
+        local map_mode = keymap.mode ~= nil and keymap.mode or { "n" }
+        if type(map_mode) ~= "table" then
+            map_mode = { map_mode }
+        end
+
+        for _, mode in ipairs(map_mode) do
+            if type(mode) ~= "string" then
+                return false, string.format("Invalid mode for keymap in %s", self.name)
+            end
+
+            local lhs = keymap.lhs or keymap[1]
+            local rhs = keymap.rhs or keymap[2]
+
+            if not lhs or not rhs then
+                return false, string.format("Missing keymap lhs/rhs in %s", self.name)
+            end
+
+            local ok, err = pcall(vim.keymap.set, mode, lhs, rhs, opts)
+            if not ok then
+                return false, string.format("Failed to set keymap: %s", err)
+            end
+        end
+    end
+
     return true
 end
 
@@ -247,30 +326,6 @@ function PlugmanPlugin:is_installed()
     -- Plugin Management
     local path = self:_build_path()
     return vim.fn.isdirectory(path) == 1
-end
-
----Setup plugin keymaps
-function PlugmanPlugin:_setup_keymaps()
-    local keymaps = type(self.keys) == "function" and self.keys() or self.keys
-    for _, keymap in ipairs(keymaps) do
-        if type(keymap) == "table" then
-            local opts = {
-                buffer = keymap.buffer,
-                desc = keymap.desc,
-                silent = keymap.silent ~= false,
-                remap = keymap.remap,
-                noremap = keymap.noremap ~= false,
-                nowait = keymap.nowait,
-                expr = keymap.expr,
-            }
-            local map_mode = keymap.mode ~= nil and keymap.mode or { "n" }
-            for _, mode in ipairs(map_mode) do
-                vim.keymap.set(mode, keymap[1], keymap[2], opts)
-            end
-        else
-            vim.notify(string.format("Invalid keymap entry for %s", self.name))
-        end
-    end
 end
 
 ---Get plugin status
