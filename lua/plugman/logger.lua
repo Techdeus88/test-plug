@@ -388,6 +388,7 @@ local M = {}
 function M.setup(config)
     if not _instance then
         _instance = PlugmanLogger:new(config)
+        _instance:_init()
     end
     return _instance
 end
