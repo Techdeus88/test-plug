@@ -776,11 +776,12 @@ function PlugmanDashboard:_show_plugin_details()
         '',
         'Dependencies: ' .. (plugin.depends and next(plugin.depends) and table.concat(plugin.depends, ', ') or 'none'),
         'Events: ' .. (plugin.event and next(plugin.event) and table.concat(plugin.event, ', ') or 'none'),
-        'Commands: ' .. (plugin.cmd and next(plugin.cmd) and #plugin.cmd .. 'commands' or 'none'),
+        'Commands: ' .. (plugin.cmd and next(plugin.cmd) and #plugin.cmd or 'none'),
         'Filetypes: ' .. (plugin.ft and next(plugin.ft) and table.concat(plugin.ft, ', ') or 'none'),
-        'Keys: ' .. (plugin.keys and next(plugin.keys)) and #plugin.keys .. 'keymap' or 'none' .. #plugin.keys > 1 and 's' or '',
+        'Keys: ' .. (plugin.keys and next(plugin.keys) and #plugin.keys .. 'keymap' or 'none' .. #plugin.keys > 1 and 's' or ''),
         '',
         'Configuration:',
+        vim.inspect(plugin.config or {}, { indent = '  ' }),
         vim.inspect(plugin.opts or {}, { indent = '  ' }),
     }
 
