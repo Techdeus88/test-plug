@@ -770,7 +770,7 @@ function PlugmanDashboard:_show_plugin_details()
         'Status: ' .. (plugin:status() or 'unknown'),
         'Lazy: ' .. (plugin.lazy and 'yes' or 'no'),
         'Priority: ' .. (plugin.priority or 'unknown'),
-        'In-Session' .. (plugin.added and 'yes' or 'no'),
+        'In-Session: ' .. (plugin.added and 'yes' or 'no'),
         'Installed: ' .. (plugin:is_installed() and 'yes' or 'no'),
         'Load Time: ' .. (plugin.loaded and utils.format_time(plugin.load_time) or 'not loaded'),
         '',
@@ -780,7 +780,7 @@ function PlugmanDashboard:_show_plugin_details()
         'Filetypes: ' .. (plugin.ft and next(plugin.ft) and table.concat(plugin.ft, ', ') or 'none'),
         'Keys: ' .. (plugin.keys and next(plugin.keys) and #plugin.keys .. ' keymap' .. (#plugin.keys > 1 and 's' or '') or 'none'),
         '',
-        'Configuration:',
+        'Configuration: ',
         vim.inspect(plugin.config or {}, { indent = '  ' }),
         vim.inspect(plugin.opts or {}, { indent = '  ' }),
     }

@@ -43,10 +43,10 @@ function PlugmanLoader:_resolve_dependencies(plugin)
   self.loading_plugins[plugin.name] = true
 
   for _, dep_source in ipairs(plugin.depends) do
-    local dep_name = require("plugman.core.utils").get_name_from_source(dep_source)
-    local dep = self.plugins[dep_name]
+    -- Try multiple ways to find the dependency
+    local dep = self:_find_dependency(dep_source)
     if not dep then
-      return false, string.format("Dependency not found: %s for plugin: %s", dep_name, plugin.name)
+      return false, string.format("Dependency not found: %s for plugin: %s", dep_source, plugin.name)
     end
 
     if not dep.loaded then
@@ -66,6 +66,39 @@ function PlugmanLoader:_resolve_dependencies(plugin)
 
   self.loading_plugins[plugin.name] = nil
   return true
+end
+
+---Find a dependency by source or name
+---@param dep_source string
+---@return PlugmanPlugin|nil
+function PlugmanLoader:_find_dependency(dep_source)
+  local utils = require("plugman.core.utils")
+  
+  -- First, try to find by exact source match
+  for _, plugin in pairs(self.plugins) do
+    if plugin.source == dep_source then
+      return plugin
+    end
+  end
+  
+  -- Second, try to find by extracted name
+  local dep_name = utils.get_name_from_source(dep_source)
+  local dep = self.plugins[dep_name]
+  if dep then
+    return dep
+  end
+  
+  -- Third, try to find by partial source match (for cases like "user/repo" vs "user/repo.nvim")
+  for _, plugin in pairs(self.plugins) do
+    if plugin.source and (
+      plugin.source:find(dep_source, 1, true) or 
+      dep_source:find(plugin.source, 1, true)
+    ) then
+      return plugin
+    end
+  end
+  
+  return nil
 end
 
 ---Load all plugins with proper ordering
