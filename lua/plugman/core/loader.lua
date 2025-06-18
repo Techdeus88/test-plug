@@ -43,7 +43,7 @@ function PlugmanLoader:_resolve_dependencies(plugin)
   self.loading_plugins[plugin.name] = true
 
   for _, dep_source in ipairs(plugin.depends) do
-    local dep_name = require("core.utils").get_name_from_source(dep_source)
+    local dep_name = require("plugman.core.utils").get_name_from_source(dep_source)
     local dep = self.plugins[dep_name]
     if not dep then
       return false, string.format("Dependency not found: %s for plugin: %s", dep_name, plugin.name)
