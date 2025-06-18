@@ -395,6 +395,40 @@ function M.contains(table, value)
   return false
 end
 
+---Extract plugin name from source
+---@param source string
+---@return string
+function M.get_name_from_source(source)
+  if not source or type(source) ~= 'string' then
+      error('Invalid plugin source: ' .. tostring(source))
+  end
+
+  -- Handle different source formats
+  local name = source
+
+  -- Remove .git suffix if present
+  if name:match('%.git$') then
+      name = name:sub(1, -5)
+  end
+
+  -- Extract last part of path
+  local last_part = name:match('([^/]+)$')
+  if last_part then
+      name = last_part
+  end
+
+  -- Remove any remaining .git suffix
+  if name:match('%.git$') then
+      name = name:sub(1, -5)
+  end
+
+  if not name or name == '' then
+      error('Could not extract plugin name from source: ' .. source)
+  end
+
+  return name
+end
+
 ---Filter table by predicate
 ---@param table table
 ---@param predicate function
