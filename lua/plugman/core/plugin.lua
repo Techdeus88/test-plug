@@ -276,8 +276,7 @@ end
 
 ---Process plugin configuration
 ---@param merged_opts table
----@return boolean success
----@return string? error
+---@return function|string|boolean
 function PlugmanPlugin:_process_config(merged_opts)
     if not merged_opts then
         return true
@@ -288,7 +287,7 @@ function PlugmanPlugin:_process_config(merged_opts)
         if not ok then
             return false, string.format("Config function failed: %s", err)
         end
-        return true
+        return ok
     elseif type(self.config) == 'boolean' then
         return self.config
     elseif type(self.config) == 'string' then

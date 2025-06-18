@@ -97,33 +97,41 @@ end
 ---@param chosen_dir string
 ---@param specs table
 function M._scan_directory(chosen_dir, specs)
-    local plugins_dir = { chosen_dir }
+    local full_path = vim.fn.stdpath('config') .. '/lua/' .. chosen_dir:gsub('%.', '/')
 
-    for _, dir in ipairs(plugins_dir) do
-        local full_path = vim.fn.stdpath('config') .. '/lua/' .. dir:gsub('%.', '/')
-        if vim.fn.isdirectory(full_path) == 1 then
-            local files = vim.fn.glob(full_path .. '/*.lua', false, true)
-            for _, file in ipairs(files) do
-                local filename = vim.fn.fnamemodify(file, ':t:r')
-                local module_name = dir .. '.' .. filename
+    if vim.fn.isdirectory(full_path) ~= 1 then
+        return
+    end
 
-                local ok, plugins_spec = pcall(require, module_name)
-                if ok then
-                    if type(plugins_spec[1]) == "string" then
-                        local spec = plugins_spec
+    -- Process all .lua files in current directory
+    local files = vim.fn.glob(full_path .. '/*.lua', false, true)
+    for _, file in ipairs(files) do
+        local filename = vim.fn.fnamemodify(file, ':t:r')
+        local module_name = chosen_dir .. '.' .. filename
+
+        local ok, plugins_spec = pcall(require, module_name)
+        if ok then
+            if type(plugins_spec[1]) == "string" then
+                local spec = plugins_spec
+                table.insert(specs, spec)
+            else
+                for _, spec in ipairs(plugins_spec) do
+                    if type(spec) == "table" and type(spec[1]) == "string" then
                         table.insert(specs, spec)
-                    else
-                        for _, spec in ipairs(plugins_spec) do
-                            if type(spec) == "table" and type(spec[1]) == "string" then
-                                table.insert(specs, spec)
-                            end
-                        end
                     end
-                else
-                    vim.notify("Failed to load plugin spec from: " .. module_name, vim.log.levels.ERROR)
                 end
             end
+        else
+            vim.notify("Failed to load plugin spec from: " .. module_name, vim.log.levels.ERROR)
         end
+    end
+
+    -- Recursively process subdirectories
+    local subdirs = vim.fn.glob(full_path .. '/*/', false, true)
+    for _, subdir in ipairs(subdirs) do
+        local subdir_name = vim.fn.fnamemodify(subdir, ':t')
+        local new_chosen_dir = chosen_dir .. '.' .. subdir_name
+        M._scan_directory(new_chosen_dir, specs)
     end
 end
 
@@ -155,34 +163,34 @@ function M._setup_autocmds()
             vim.defer_fn(function()
                 -- Run health check
                 health.check_all()
-                
+
                 -- Auto-launch dashboard if conditions are met
                 local should_auto_launch = false
-                
+
                 -- Condition 1: First time setup
                 if not M.cache:get('initialized') then
                     should_auto_launch = true
                     M.cache:set('initialized', true)
                 end
-                
+
                 -- Condition 2: Plugins need attention
                 local stats = M.api:stats()
                 if stats.errors > 0 or stats.disabled > 0 then
                     should_auto_launch = true
                 end
-                
+
                 -- Condition 3: Recent plugin changes
                 local recent_changes = M.cache:get('recent_changes') or {}
                 if #recent_changes > 0 then
                     should_auto_launch = true
                 end
-                
+
                 -- Condition 4: Configuration changed
                 if M.cache:get('config_changed') then
                     should_auto_launch = true
                     M.cache:set('config_changed', false)
                 end
-                
+
                 if should_auto_launch then
                     M.ui:open()
                 end
